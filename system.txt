@@ -1,0 +1,703 @@
+1. Kiến trúc tổng thể (High-Level Architecture)
+Hệ thống sẽ được xây dựng theo mô hình Client-Server:
+Frontend: Next.js (phù hợp cho Dashboard và SEO nếu cần), Tailwind CSS cho giao diện.
+Backend: Node.js (Express hoặc NestJS) để xử lý logic nghiệp vụ và kết nối Database.
+Database: MySQL (quản lý quan hệ giữa TNV, Ca trực, Lịch sử).
+Communication: Socket.io 
+
+2. Thiết kế Cơ sở dữ liệu (Database Schema)
+Để đáp ứng các tính năng khóa đăng ký, đổi ca và điểm danh, cấu trúc bảng cần lưu ý:
+Users (TNV): id, ma_tnv, password (hashed), fullname, dob, email, status (active/inactive), min_shifts_per_month (mặc định là 2, nhưng admin có thể chỉnh sửa riêng cho từng người)
+system_weekly_config (set cứng)
+
+Day_of_week
+Shift_Name
+Start_Time
+End_Time
+Max_Slots
+1 (Thứ 2)
+Ca Sáng
+08:00
+12:00
+5
+1 (Thứ 2)
+Ca Chiều
+13:30
+17:30
+5
+...
+...
+...
+...
+...
+
+
+shift_instances 
+model ShiftInstance {
+  id           Int      @id @default(autoincrement())
+  date         DateTime
+  shiftName    String
+  maxSlots     Int      @default(5)
+  isActive     Boolean  @default(true)
+  isPublished  Boolean  @default(false)
+
+  // 1. Đánh index đơn lẻ cho trường date (Nếu bạn hay lọc theo ngày)
+  @@index([date])
+}
+
+Registrations: id, user_id, shift_id, registration_type (tự chọn/BNS xếp), is_confirmed (TNV xác nhận qua mail/web).thêm một Composite Unique Key cho cặp (user_id, shift_id). Điều này ngăn chặn lỗi logic khiến một người có thể đăng ký 2 lần vào cùng 1 ca trực nếu hệ thống gặp lỗi mạng. 
+Bảng ShiftRequests:
+id: PK.
+sender_id: TNV muốn nhờ/đổi.
+receiver_id: TNV được nhờ (có thể để NULL nếu là yêu cầu công khai).
+shift_id_from: Ca trực gốc của người gửi.
+shift_id_to: Ca trực muốn đổi (NULL nếu là nhờ trông hộ 1 chiều).
+type: SWAP (đổi ca) hoặc SUBSTITUTE (trông hộ).
+status: PENDING, ACCEPTED_BY_RECEIVER, APPROVED_BY_BNS, REJECTED, CANCELED.
+note: Lý do (ví dụ: "Mình bận việc gia đình đột xuất").
+Attendance (Điểm danh): id, user_id, shift_id, is_present, updated_by , status (có mặt/muộn/vắng/quên trông), note. 
+SystemConfig: Lưu các biến môi trường như global_min_shifts, registration_deadline. 
+Notifications:
+id: Primary Key.
+user_id: ID của TNV nhận thông báo.
+title: Tiêu đề thông báo.
+content: Nội dung chi tiết.
+is_read: Boolean (Mặc định là false).
+created_at: Thời gian gửi.
+
+3. Các Module chức năng chi tiết
+A. Hệ thống Đăng ký & Khóa tự động
+Logic: Sử dụng node-cron hoặc Scheduled Tasks trên server để kiểm tra thời gian.
+Ngày 20 hàng tháng: Mở trạng thái is_registration_open = true.
+Ngày 25 hàng tháng: Chuyển is_registration_open = false.
+UI: Bảng lịch (Calendar View). Những ô quá 5 người hoặc sau ngày 25 sẽ bị vô hiệu hóa (disabled) và đổ màu xám.
+
+B. Luồng Phê duyệt & Đổi ca (Workflow)
+Đăng ký: TNV chọn 2-5 buổi -> Hiển thị số lượng realtime bằng cách đếm (COUNT) bản ghi trong bảng Registrations.
+Locking Mechanism: Khi nhiều TNV cùng bấm đăng ký vào 1 ca chỉ còn 1 slot cuối cùng, cần xử lý Race Condition ở Backend để đảm bảo không vượt quá max_slots. 
+Đổi ca:
+TNV A gửi yêu cầu cho TNV B.
+TNV A có thể hủy yêu cầu khi chưa được B đồng ý hoặc BNS chưa duyệt.
+Hệ thống gửi thông báo cho TNV B.
+B đồng ý -> Gửi thông báo cho Admin (BNS) duyệt trên Dashboard.
+BNS Duyệt -> Cập nhật lại user_id trong bảng Registrations.
+Ràng buộc: Cần thêm logic kiểm tra:
+Sau khi đổi, TNV A và B có bị trùng lịch với ca khác của chính họ không?
+Sau khi đổi, số buổi của mỗi người có còn đảm bảo KPI tối thiểu không? (Hoặc hệ thống chỉ cần đưa ra cảnh báo cho BNS)
+C. Dashboard dành cho BNS (Trưởng bộ phận)
+Giao diện quản lý cần trực quan:
+Calendar Heatmap: Đổ màu các ô lịch (Đỏ: Ca trống < 2 người; Xanh: Đã đủ; Xám: Full 5 người).
+Quick Action: Click vào ngày để xem danh sách TNV, click vào tên TNV để xem lộ trình trực của cá nhân đó.
+Export: Sử dụng thư viện exceljs để xuất file Excel danh sách trực đầu tháng và báo cáo chuyên cần cuối tháng.
+D. Dashboard BNS: Xếp lịch thủ công 
+Giao diện Dashboard BNS:
+Cột Danh sách chờ (Sidebar): Hiển thị danh sách các TNV chưa đăng ký đủ số buổi tối thiểu (KPI).
+Mỗi thẻ TNV hiển thị: Mã TNV - Họ tên - (Số buổi đã có/Số buổi tối thiểu).
+Cập nhật Real-time: Ngay khi BNS thêm một mã TNV vào một ca trực thành công, hệ thống tính toán lại số buổi của TNV đó. Nếu số buổi đã đạt mức tối thiểu (ví dụ 2/2), TNV đó sẽ tự động biến mất khỏi danh sách chờ này.
+Lịch điều hành (Main View): Hiển thị dạng lưới (Grid) hoặc danh sách ngày.
+Luồng thao tác (Workflow):
+BNS click vào một ngày cụ thể trên lịch.
+Một cửa sổ Modal hiện lên với danh sách những người đã đăng ký trong ngày đó.
+Ô nhập liệu nhanh (Quick Input): BNS nhập mã số TNV (ví dụ: TNV001).
+Hệ thống tự động kiểm tra:
+Nếu mã tồn tại và TNV chưa có tên trong ca này: Thêm ngay vào danh sách.
+Nếu mã không tồn tại: Báo đỏ.
+Nếu TNV đã có tên trong ca: Cảnh báo trùng.
+Sau khi Lưu, danh sách TNV chờ ở cột bên trái sẽ được làm mới ngay lập tức.
+Thêm nút "Công bố lịch" (Publish). BNS cứ xếp thoải mái, khi nào xong xuôi bấm Publish thì thông báo mới gửi đi một loạt. -> Check ma_tnv trong bảng Users.Tạo bản ghi trong Registrations với registration_type = 'BNS_ASSIGNED'.
+Tại Modal của mỗi ca trực, thay vì chỉ có 1 ô nhập đơn lẻ, chúng ta sẽ có:
+Input Box: Một ô text cho phép nhập chuỗi (Ví dụ: B22DCPT043, B22DCPT001, B22DCPT099).
+Nút "Thêm nhanh": Hệ thống sẽ tách chuỗi này theo dấu phẩy , hoặc dấu cách để xử lý đồng thời.
+Preview tức thì: Hiển thị danh sách tên tương ứng với mã vừa nhập bên dưới để BNS xác nhận trước khi bấm "Lưu".
+2. Logic "Làm sạch" danh sách chờ (Auto-Filtering)
+Đây là phần giúp BNS không bị rối mắt. Quy trình sẽ chạy như sau:
+Cột Danh sách chờ (Sidebar): Chỉ hiển thị những TNV có Số buổi đã đăng ký < Số buổi tối thiểu (KPI).
+Cơ chế cập nhật:
+Mỗi khi BNS bấm "Lưu" ở một ca trực, Backend sẽ tính toán lại số buổi của các mã TNV vừa được thêm.
+Frontend (Socket.io): Gửi tín hiệu cập nhật. Thẻ của TNV đó sẽ biến mất ngay lập tức (với hiệu ứng transition) khỏi cột danh sách chờ nếu họ đã đủ buổi.
+Trường hợp đặc biệt: Nếu BNS xóa một TNV khỏi ca trực và khiến họ bị thiếu buổi, tên TNV đó sẽ tự động xuất hiện trở lại ở danh sách chờ.
+
+E. Quản lý TNV & Cấu hình (Admin Panel)
+BNS có quyền quản trị toàn diện:
+Chỉnh sửa hồ sơ: Thay đổi trạng thái Active/Inactive (TNV Inactive sẽ không xuất hiện trong danh sách đăng ký và không nhận thông báo).
+Tùy chỉnh KPI: BNS có thể chỉnh sửa min_shifts_per_month cho từng cá nhân (ví dụ: TNV mới cần trực nhiều hơn, hoặc TNV kỳ cựu được giảm ca).
+Mở khóa nhanh: Nút "Override" để mở lại cổng đăng ký cho một cá nhân cụ thể sau ngày 25 nếu có lý do chính đáng.
+F. Hệ thống Điểm danh (Check-in) & Hậu kiểm
+Tính năng này kết hợp giữa tính tự giác và quản lý:
+Real-time Check-in (Dành cho TNV):
+Trong khung giờ ca trực, khi TNV truy cập Dashboard, hệ thống hiện danh sách tất cả TNV của ca đó.
+Bất kỳ ai trong ca đó cũng có thể tích chọn Present (Có mặt) cho mình và cho các bạn đồng trực.
+Hậu kiểm (Dành cho BNS):
+Với các buổi đã qua, BNS vào mục "Lịch sử ca trực".
+BNS có quyền ghi đè (Override) trạng thái điểm danh: Chuyển từ Vắng thành Có mặt (nếu TNV quên điện thoại) hoặc ngược lại, và ghi chú lý do (ví dụ: "Đi muộn 30p").
+Trạng thái "Quên điểm danh": Nên có một trạng thái trung gian. Nếu hết ca mà không thấy điểm danh, hệ thống tự chuyển thành "Chưa xác nhận" thay vì "Vắng" ngay lập tức.
+Mobile First: TNV thường dùng điện thoại để check lịch và điểm danh. Hãy đảm bảo giao diện Lịch (Calendar) trên điện thoại hiển thị theo dạng danh sách (List view) thay vì dạng lưới (Grid view) để tránh bị tràn màn hình. 
+G. Hệ thống thông báo
+1. Giao diện Thông báo (UI)
+Vị trí: Biểu tượng quả chuông trên thanh Navigation (Header).
+Trạng thái: Có chấm đỏ nếu có thông báo chưa đọc.
+Bảng danh sách: Khi click vào chuông, một menu thả xuống (Dropdown) hoặc Modal hiện ra danh sách các thông báo mới nhất.
+Phân loại màu sắc:
+Màu xanh (Thông tin): Bạn đã đăng ký thành công ca trực.
+Màu vàng (Cảnh báo): BNS vừa xếp bạn vào một ca trực mới.
+Màu cam (Yêu cầu): Có người muốn đổi ca với bạn.
+Màu đỏ (Khẩn cấp): Nhắc nhở ca trực sắp bắt đầu (trước 2 tiếng).
+2. Các loại thông báo hệ thống sẽ gửi
+Hệ thống sẽ tự động tạo thông báo cho TNV trong các trường hợp sau:
+BNS xếp lịch thủ công: "Bạn đã được BNS thêm vào ca trực ngày [Ngày] - [Buổi]. Vui lòng kiểm tra lịch."
+Yêu cầu đổi ca: "TNV [Tên] muốn đổi ca ngày [Ngày] với bạn."
+Nhắc lịch tự động: "Nhắc nhở: Bạn có ca trực sẽ bắt đầu vào lúc [Giờ]. Đừng quên check-in nhé!"
+4. Logic Xử lý (Backend & Real-time)
+Real-time: Sử dụng Socket.io. Khi BNS nhập mã TNV và bấm "Lưu", Backend sẽ vừa lưu vào bảng Registrations, vừa bắn một sự kiện new_notification tới Socket của TNV đó. Thông báo sẽ hiện lên ngay lập tức mà không cần load lại trang.
+Persistent: Khi TNV đăng nhập lại sau một thời gian, hệ thống sẽ truy vấn bảng Notifications để hiển thị lại toàn bộ lịch sử thông báo (thường là trong 30 ngày gần nhất).
+H. Lịch trông (tnv)
+Sau khi đăng kí lịch xong, trang lịch trông của tnv sẽ được cập nhật UI là lịch trông của người đó.
+I. Nhờ trông hộ: 
+A. Yêu cầu đích danh (Direct Request)
+TNV A chọn ca trực của mình và chọn "Nhờ trông hộ", sau đó chọn TNV B.
+Hệ thống kiểm tra: TNV B có đang rảnh (không trùng ca) vào giờ đó không?
+TNV B nhận thông báo -> Bấm "Đồng ý".
+Trạng thái chuyển sang ACCEPTED_BY_RECEIVER. Thông báo bắn tới BNS.
+BNS duyệt trên Dashboard -> Hệ thống tự động cập nhật Registrations:
+Xóa/Ẩn bản ghi của TNV A tại ca đó.
+Thêm bản ghi cho TNV B với registration_type = 'SUBSTITUTE'.
+B. Yêu cầu công khai (Broadcast Request - "Chợ ca")
+Nếu TNV A không biết nhờ ai, họ có thể treo yêu cầu lên một "Chợ ca":
+TNV A đăng tin nhờ trông hộ ca ngày X.
+Tất cả TNV khác (đang rảnh giờ đó) nhận được thông báo hoặc thấy tin trong mục "Ca trống cần người".
+TNV C thấy phù hợp và bấm "Nhận ca".
+Luồng tiếp tục quay về bước duyệt của BNS.
+
+3. Cập nhật Dashboard BNS (Dành cho Trưởng bộ phận)
+Để tính năng này không làm loạn hệ thống, BNS cần một giao diện quản lý yêu cầu (Request Management):
+Tab "Yêu cầu chờ duyệt": Hiển thị danh sách các cặp nhờ/đổi ca.
+Cảnh báo KPI: Khi BNS xem một yêu cầu trông hộ, hệ thống nên hiển thị:
+"Nếu duyệt, TNV A sẽ chỉ còn 1/2 buổi (Dưới KPI)".
+"TNV B sẽ tăng lên 4/2 buổi".
+Nút "Duyệt nhanh" (Quick Approve): Một click để cập nhật lại toàn bộ bảng Registrations và gửi thông báo hoàn tất cho cả 2 bên.
+
+4. Logic Thông báo (Notifications)
+Tính năng này cần sự phản hồi nhanh, nên Socket.io và Push Notification là cực kỳ quan trọng:
+Tức thì: "Bạn có yêu cầu trông hộ mới từ [Tên] cho ca sáng mai!"
+Nhắc nhở: Nếu sau 4 tiếng người nhận chưa phản hồi, gửi nhắc nhở hoặc tự động hủy yêu cầu để người gửi tìm người khác.
+Kết quả: "BNS đã phê duyệt việc bạn trông hộ cho [Tên]. Đừng quên lịch trực nhé!"
+J. Tạo lịch trông trước mỗi tháng
+Hậu đài (Backend): Đã có sẵn một bản đồ logic cố định.
+Ví dụ: Thứ 2 (Ca sáng, Ca chiều), Thứ 7 (Chỉ ca sáng), Chủ nhật (Nghỉ).
+Thao tác của BNS:
+Truy cập vào Dashboard Quản lý lịch.
+Chọn tháng (ví dụ: tháng 6/2026).
+Nhấn nút "Khởi tạo bản nháp".
+Hệ thống tự động quét lịch tuần mẫu cứng và tạo toàn bộ các ca trực cho 30 ngày của tháng 6.
+2. Giao diện "Tích bỏ" (The "Exclusion" Interface)
+Đây là nơi BNS thực hiện quyền quyết định của mình. Giao diện cần thiết kế tối giản để việc "loại bỏ" diễn ra nhanh nhất:
+Chế độ xem Lịch (Month View): Mỗi ô ngày sẽ hiển thị các Card/Tag ca trực.
+Thao tác Tắt/Bật (Toggle):
+BNS chỉ cần Click vào một ca trực để làm nó mờ đi (tương đương với việc hủy buổi đó).
+Nếu lỡ tay xóa nhầm, Click lại lần nữa để khôi phục.
+Lưu trạng thái: Các thay đổi này sẽ cập nhật trực tiếp vào trường is_active trong bảng shift_instances.
+BNS cần làm việc này trước mỗi tháng và gửi trước khi thời gian đăng kí diễn ra
+
+4. Giải pháp thông báo & Xác nhận (Email & Real-time)
+Nhắc lịch: Tự động gửi Email/Notification trước 2 tiếng qua Cron Job quét database tìm các ca trực sắp diễn ra.
+Xác nhận qua Email: Gửi một link chứa mã token duy nhất. Khi TNV click, hệ thống cập nhật is_confirmed = true.
+Real-time: Sử dụng Socket.io để khi một TNV vừa bấm đăng ký, số lượng người ở ô lịch đó trên máy các TNV khác sẽ nhảy số ngay lập tức mà không cần F5.
+5. Giao diện (UI/UX) đề xuất
+Trạng thái ô lịch:
+Trống (<2 người): Viền đỏ cảnh báo.
+Bình thường (2-4 người): Màu xanh lá nhạt.
+Full (5 người): Màu xám, không thể click.
+Hotline: Luôn ghim một nút "Hỗ trợ khẩn cấp" ở góc màn hình dẫn đến số điện thoại BNS.
+
+Thành phần
+Công cụ đề xuất
+Lý do
+Background Jobs
+BullMQ + Redis
+Xử lý gửi mail thông báo và tự động khóa ca (thay vì chỉ dùng node-cron đơn thuần để tránh mất job khi server restart).
+Database Migrations
+Prisma 
+Giúp quản lý Schema dễ dàng, hỗ trợ mạnh cho NestJS.
+Real-time
+Socket.io
+Phù hợp để cập nhật slot và thông báo tức thì.
+
+
+You are a Senior Full-Stack Architect, Backend Engineer, Frontend Engineer, Database Designer, and DevOps Engineer responsible for designing and implementing a production-ready Volunteer Shift Management System (VMS).
+The system must support:
+Volunteer shift registration
+Shift assignment
+Shift swapping & substitution
+Attendance tracking
+Real-time notifications
+KPI monitoring
+Automated registration windows
+Mobile-first check-in workflows
+The architecture must prioritize:
+Scalability
+Concurrency safety
+Real-time responsiveness
+Clean modular architecture
+Security
+Excellent UX/UI
+Maintainability
+
+1. Tech Stack & Architecture
+Frontend
+Build the frontend using:
+Next.js (Latest, App Router)
+TypeScript
+Tailwind CSS
+Shadcn/UI
+Lucide React
+React Query / TanStack Query
+Zustand or Context API for lightweight state
+Socket.io Client
+Full Responsive Design
+Frontend Requirements
+Mobile-first
+Server Components where appropriate
+Optimistic UI updates
+Skeleton loading states
+Toast notifications
+Dark mode support
+Accessible components (ARIA)
+
+Backend
+Build the backend using:
+NestJS
+TypeScript
+Prisma ORM
+MySQL
+Socket.io Gateway
+BullMQ + Redis
+JWT Authentication
+Cron Jobs
+Backend Architecture
+Use clean modular architecture:
+src/
+├── auth/
+├── users/
+├── shifts/
+├── registrations/
+├── attendance/
+├── notifications/
+├── requests/
+├── admin/
+├── websocket/
+├── jobs/
+├── common/
+Use:
+DTO validation with class-validator
+Global exception filters
+Role-based guards
+Transaction-safe services
+Repository/service separation
+
+2. User Roles
+Volunteer
+Capabilities:
+Login
+View assigned shifts
+Register for shifts
+Request swaps/substitutions
+Check attendance
+Receive notifications
+Claim public substitute requests
+Admin
+Capabilities:
+Full shift management
+Publish/unpublish schedules
+Generate shifts from templates
+Override attendance
+Approve/reject requests
+Bulk assign volunteers
+KPI monitoring dashboard
+Manage volunteers
+
+3. Authentication & Security
+Implement secure authentication:
+JWT Access Token
+Refresh Token
+Password hashing with bcrypt
+HTTP-only cookies
+Rate limiting
+CSRF protection
+Helmet security headers
+Request validation
+Login Flow
+Accounts are pre-generated by backend seed scripts.
+User logs in with:
+ma_tnv
+password
+After login:
+return JWT
+return role
+initialize socket session
+
+4. Database Schema (Prisma)
+Design a robust normalized schema.
+User
+model User {
+ id                     Int @id @default(autoincrement())
+ ma_tnv                 String @unique
+ password               String
+ fullname               String
+ role                   Role @default(VOLUNTEER)
+ status                 UserStatus @default(ACTIVE)
+ min_shifts_per_month   Int @default(2)
+
+ registrations          Registration[]
+ sentRequests           ShiftRequest[] @relation("Sender")
+ receivedRequests       ShiftRequest[] @relation("Receiver")
+ attendances            Attendance[]
+ notifications          Notification[]
+
+ createdAt              DateTime @default(now())
+ updatedAt              DateTime @updatedAt
+}
+
+ShiftInstance
+model ShiftInstance {
+ id             Int @id @default(autoincrement())
+ date           DateTime
+ shiftName      String
+ position       ShiftPosition
+ maxSlots       Int @default(5)
+
+ isActive       Boolean @default(true)
+ isPublished    Boolean @default(false)
+
+ registrations  Registration[]
+ attendances    Attendance[]
+
+ createdAt      DateTime @default(now())
+
+ @@index([date])
+}
+
+Registration
+model Registration {
+ id                 Int @id @default(autoincrement())
+
+ userId             Int
+ shiftId            Int
+
+ registrationType   RegistrationType
+ isConfirmed        Boolean @default(false)
+
+ user               User @relation(fields: [userId], references: [id])
+ shift              ShiftInstance @relation(fields: [shiftId], references: [id])
+
+ createdAt          DateTime @default(now())
+
+ @@unique([userId, shiftId])
+}
+
+ShiftRequest
+model ShiftRequest {
+ id                Int @id @default(autoincrement())
+
+ senderId          Int
+ receiverId        Int?
+
+ shiftIdFrom       Int
+ shiftIdTo         Int?
+
+ type              RequestType
+ status            RequestStatus @default(PENDING)
+
+ sender            User @relation("Sender", fields: [senderId], references: [id])
+ receiver          User? @relation("Receiver", fields: [receiverId], references: [id])
+
+ createdAt         DateTime @default(now())
+}
+
+Attendance
+model Attendance {
+ id            Int @id @default(autoincrement())
+
+ userId        Int
+ shiftId       Int
+
+ status        AttendanceStatus
+ note          String?
+
+ updatedBy     Int
+
+ createdAt     DateTime @default(now())
+}
+
+Notification
+model Notification {
+ id          Int @id @default(autoincrement())
+
+ userId      Int
+
+ title       String
+ content     String
+
+ isRead      Boolean @default(false)
+
+ type        NotificationType
+
+ createdAt   DateTime @default(now())
+}
+
+5. Core Business Logic
+A. Automated Registration Window
+Use:
+BullMQ
+Cron Jobs
+Redis
+Rules
+Open registration automatically on day 20 monthly
+Close registration automatically on day 25 monthly
+Past shifts become locked automatically
+Requirements
+Implement:
+distributed locking
+transaction-safe registration
+race-condition prevention
+Critical Requirement
+Prevent overbooking when multiple volunteers register simultaneously.
+Use:
+Prisma transactions
+row-level locking
+slot count validation
+
+B. Volunteer Features
+Shift Calendar
+Volunteers can:
+View monthly calendar
+Register only when registration window is open
+View slot availability in real time
+Calendar Heatmap
+Red → fewer than 2 volunteers
+Green → 2–4 volunteers
+Grey → full / locked / inactive
+My Shifts
+Display:
+Upcoming shifts
+Completed shifts
+Attendance history
+Check-In
+Rules:
+Only visible during valid shift window
+Only visible to volunteers assigned to that shift
+Volunteers can mark:
+themselves
+teammates in same shift
+Use mobile-first design.
+
+C. Admin Management System
+Dashboard
+Include:
+Volunteer KPI sidebar
+Attendance statistics
+Monthly registration analytics
+Real-time alerts
+KPI Sidebar
+Show volunteers who failed:
+assigned_shifts < min_shifts_per_month
+Update instantly using Socket.io.
+
+Bulk Assignment Tool
+Admin inputs:
+TNV001, TNV002, TNV005
+System must:
+Parse IDs
+Validate users
+Prevent duplicates
+Queue transaction job
+Return assignment summary
+Use BullMQ workers.
+
+Shift Generation System
+Generate monthly schedules automatically.
+Shift Rules
+Two locations:
+place_1
+place_2
+Schedule logic:
+Mon–Fri → 1 shift/day
+Sat → 2 shifts/day
+Sun → 2 shifts/day
+Admin Calendar Features
+Toggle shifts active/inactive
+Publish/unpublish
+Edit generated shifts
+Live updates
+
+D. Swap & Substitute Workflow
+Direct Swap
+Flow:
+A requests B
+→ B accepts
+→ Admin approves
+→ Registrations update transactionally
+
+Marketplace Substitute
+Flow:
+Volunteer posts shift
+→ Others can claim
+→ Admin approves
+→ Registration transfer occurs
+
+Validation Rules
+System must detect:
+KPI violations
+duplicate shifts
+overlapping schedules
+invalid swaps
+Admin receives warning notifications.
+
+E. Attendance System
+Volunteer Check-In
+Features:
+Mobile optimized
+Quick toggle interface
+Real-time sync
+Statuses:
+PRESENT
+LATE
+ABSENT
+FORGOT
+
+Admin Override (Hậu Kiểm)
+Admins can:
+modify attendance
+attach notes
+audit attendance changes
+All changes logged.
+
+F. Notifications System
+Implement real-time notifications using:
+Socket.io
+Notification persistence
+Notification Types
+INFO
+WARNING
+REQUEST
+URGENT
+Trigger Events
+Shift approved
+Swap request received
+Shift reminder (2 hours before shift)
+KPI warnings
+Attendance issues
+Bell icon must update live without refresh.
+
+6. Real-Time Features (Socket.io)
+Implement events for:
+shift.updated
+registration.created
+registration.canceled
+request.created
+request.approved
+attendance.updated
+notification.created
+kpi.updated
+Requirements:
+reconnect handling
+room-based subscriptions
+authentication middleware
+
+7. API Design
+Use REST API with modular routes.
+Example:
+/api/auth/login
+/api/shifts
+/api/shifts/register
+/api/requests/swap
+/api/attendance/checkin
+/api/admin/generate-shifts
+Requirements:
+Swagger/OpenAPI docs
+Validation
+Pagination
+Filtering
+Error standardization
+
+8. UI/UX Requirements
+Desktop
+Grid-based monthly calendar
+Sidebar KPIs
+Analytics widgets
+Real-time updates
+Mobile
+Vertical schedule list
+Sticky actions
+Large tap targets
+Fast attendance actions
+
+9. Performance Requirements
+Optimize for:
+Large monthly schedules
+Concurrent registrations
+Low-latency updates
+Implement:
+DB indexing
+Query optimization
+Redis caching
+Lazy loading
+Infinite scrolling
+
+10. DevOps & Deployment
+Use:
+Docker
+Docker Compose
+Environment configs
+Services:
+frontend
+backend
+mysql
+redis
+Provide:
+production-ready .env.example
+Prisma migrations
+database seed scripts
+CI/CD recommendations
+
+11. Seed Data Requirements
+Generate:
+mock volunteers (5)
+mock admins (1)
+mock shifts 
+attendance history
+notifications
+Use realistic Vietnamese volunteer names.
+
+12. Deliverables
+Generate:
+Full Prisma schema
+NestJS module structure
+API endpoints
+DTO examples
+Socket.io gateway architecture
+BullMQ job processors
+Database transactions
+Frontend page structure
+Admin dashboard UI structure
+Mobile UI behavior
+Docker configuration
+Authentication flow
+Role permission system
+Shift generation algorithm
+Attendance workflow
+Real-time notification architecture
+KPI calculation logic
+Error handling strategy
+Production deployment recommendations
+Recommended folder structure for frontend and backend
+The implementation should be:
+production-grade
+scalable
+modular
+maintainable
+secure
+mobile-friendly
+highly responsive
+optimized for real-world concurrent usage.
+
+

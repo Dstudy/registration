@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  VOLUNTEER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ShiftPosition {
+  PLACE_1
+  PLACE_2
+}
+
+enum RegistrationType {
+  SELF
+  BNS_ASSIGNED
+  SUBSTITUTE
+}
+
+enum RequestType {
+  SWAP
+  SUBSTITUTE
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED_BY_RECEIVER
+  APPROVED_BY_BNS
+  REJECTED
+  CANCELED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  FORGOT
+  UNCONFIRMED
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  REQUEST
+  URGENT
+}
+
+// ─────────────────────────────────────────
+// Models
+// ─────────────────────────────────────────
+
+model User {
+  id                   Int        @id @default(autoincrement())
+  ma_tnv               String     @unique
+  password             String
+  fullname             String
+  email                String     @unique
+  date_of_birth        String?
+  role                 Role       @default(VOLUNTEER)
+  status               UserStatus @default(ACTIVE)
+  min_shifts_per_month Int        @default(2)
+
+  registrations    Registration[]
+  sentRequests     ShiftRequest[] @relation("Sender")
+  receivedRequests ShiftRequest[] @relation("Receiver")
+  attendances      Attendance[]
+  notifications    Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role, status])
+}
+
+model ShiftInstance {
+  id        Int           @id @default(autoincrement())
+  date      DateTime      @db.Date
+  shiftName String
+  position  ShiftPosition
+  startTime DateTime      @db.Time
+  endTime   DateTime      @db.Time
+  maxSlots  Int           @default(5)
+
+  isActive    Boolean @default(true)
+  isPublished Boolean @default(false)
+
+  registrations Registration[]
+  attendances   Attendance[]
+  requestsFrom  ShiftRequest[] @relation("ShiftFrom")
+  requestsTo    ShiftRequest[] @relation("ShiftTo")
+
+  createdAt DateTime @default(now())
+
+  @@unique([date, shiftName, position])
+  @@index([date])
+  @@index([isPublished, isActive])
+}
+
+model Registration {
+  id                Int              @id @default(autoincrement())
+  userId            Int
+  shiftId           Int
+  registrationType  RegistrationType
+  isConfirmed       Boolean          @default(false)
+  confirmationToken String?          @unique
+  emailSentAt       DateTime?
+  reminderSentAt    DateTime?
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shift ShiftInstance @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, shiftId])
+  @@index([userId])
+  @@index([shiftId])
+}
+
+model ShiftRequest {
+  id         Int           @id @default(autoincrement())
+  senderId   Int
+  receiverId Int?
+  shiftIdFrom Int
+  shiftIdTo  Int?
+  type       RequestType
+  status     RequestStatus @default(PENDING)
+  note       String?       @db.Text
+
+  sender    User           @relation("Sender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver  User?          @relation("Receiver", fields: [receiverId], references: [id], onDelete: SetNull)
+  shiftFrom ShiftInstance  @relation("ShiftFrom", fields: [shiftIdFrom], references: [id])
+  shiftTo   ShiftInstance? @relation("ShiftTo", fields: [shiftIdTo], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([shiftIdFrom])
+  @@index([status])
+}
+
+model Attendance {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  shiftId   Int
+  status    AttendanceStatus
+  note      String?          @db.Text
+  updatedBy Int
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shift ShiftInstance @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, shiftId])
+  @@index([userId])
+  @@index([shiftId])
+}
+
+model Notification {
+  id      Int              @id @default(autoincrement())
+  userId  Int
+  title   String
+  content String           @db.Text
+  isRead  Boolean          @default(false)
+  type    NotificationType
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+model SystemConfig {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
