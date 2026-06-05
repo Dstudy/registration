@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE `registration` ADD COLUMN `reminderSentAt` DATETIME(3) NULL;
+ALTER TABLE `Registration` ADD COLUMN `reminderSentAt` DATETIME(3) NULL;
