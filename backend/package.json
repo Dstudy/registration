@@ -81,7 +81,7 @@
     "typescript": "^5.3.3"
   },
   "prisma": {
-    "seed": "ts-node -r tsconfig-paths/register prisma/seed.ts"
+    "seed": "node dist/prisma/seed.js"
   },
   "jest": {
     "moduleFileExtensions": [
