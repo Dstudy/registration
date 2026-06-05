@@ -203,7 +203,7 @@ function RequestCard({
             {req.receiver && tab === 'sent' && (
               <p className="text-xs text-gray-500">Gửi tới: {req.receiver.fullname} ({req.receiver.ma_tnv})</p>
             )}
-            {req.note && <p className="text-xs text-gray-500 italic">"{req.note}"</p>}
+            {req.note && <p className="text-xs text-gray-500 italic">&quot;{req.note}&quot;</p>}
             <p className="text-xs text-gray-400 flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {format(new Date(req.createdAt), 'HH:mm dd/MM/yyyy', { locale: vi })}

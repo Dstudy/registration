@@ -142,7 +142,7 @@ export default function AdminAttendancePage() {
                       <p className="text-xs text-gray-500">
                         {rec.shift?.shiftName} — {rec.shift?.position === 'PLACE_1' ? 'Vị trí 1' : 'Vị trí 2'}
                       </p>
-                      {rec.note && <p className="text-xs text-gray-400 italic mt-0.5">"{rec.note}"</p>}
+                      {rec.note && <p className="text-xs text-gray-400 italic mt-0.5">&quot;{rec.note}&quot;</p>}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <Badge variant={STATUS_VARIANT[rec.status] ?? 'secondary'}>

@@ -15,8 +15,8 @@ services:
       --default-authentication-plugin=mysql_native_password
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
-       --innodb-buffer-pool-size=256M   # add this
-      --table-open-cache=256           # add this
+      --innodb-buffer-pool-size=256M
+      --table-open-cache=256
     healthcheck:
       test:
         [
