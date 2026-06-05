@@ -297,12 +297,12 @@ async function main() {
 
   for (const vol of volunteers) {
     for (const tmpl of notificationTemplates) {
-      await prisma.notification.create({
-        data: {
-          userId: vol.id,
-          ...tmpl,
-        },
+      const exists = await prisma.notification.findFirst({
+        where: { userId: vol.id, title: tmpl.title },
       });
+      if (!exists) {
+        await prisma.notification.create({ data: { userId: vol.id, ...tmpl } });
+      }
     }
   }
 
