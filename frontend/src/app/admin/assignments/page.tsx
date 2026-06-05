@@ -382,9 +382,9 @@ export default function AssignmentsPage() {
                               <p className="text-xs text-gray-400">{reg.user.ma_tnv}</p>
                             </div>
                             {reg.isConfirmed ? (
-                              <CheckCircle className="h-4 w-4 text-green-500 shrink-0" title="Đã xác nhận" />
+                              <span title="Đã xác nhận"><CheckCircle className="h-4 w-4 text-green-500 shrink-0" /></span>
                             ) : (
-                              <Clock className="h-4 w-4 text-amber-400 shrink-0" title="Chờ xác nhận" />
+                              <span title="Chờ xác nhận"><Clock className="h-4 w-4 text-amber-400 shrink-0" /></span>
                             )}
                             <button
                               className="h-6 w-6 flex items-center justify-center rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors shrink-0 disabled:opacity-40"
