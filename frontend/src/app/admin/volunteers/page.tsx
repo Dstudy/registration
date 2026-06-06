@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
 import api from '@/lib/api';
-import { Search, Edit2, UserCheck, UserX, UserPlus, Upload, X, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Search, Edit2, UserCheck, UserX, UserPlus, Upload, X, CheckCircle, AlertCircle, Eye, EyeOff, Trash2 } from 'lucide-react';
 
 interface Volunteer {
   id: number;
@@ -51,6 +51,9 @@ export default function VolunteersPage() {
 
   const [importResults, setImportResults] = useState<ImportResponse | null>(null);
   const [showImportResults, setShowImportResults] = useState(false);
+
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [deleteAllInput, setDeleteAllInput] = useState('');
 
   const { data } = useQuery({
     queryKey: ['admin', 'volunteers', search],
@@ -99,6 +102,18 @@ export default function VolunteersPage() {
       toast({ title: 'Lỗi import', description: err?.response?.data?.message, variant: 'destructive' }),
   });
 
+  const deleteAllMutation = useMutation({
+    mutationFn: () => api.delete('/admin/users').then((r) => r.data.data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'volunteers'] });
+      setShowDeleteAllConfirm(false);
+      setDeleteAllInput('');
+      toast({ title: `Đã xóa ${data.deleted} tình nguyện viên` });
+    },
+    onError: (err: any) =>
+      toast({ title: 'Lỗi', description: err?.response?.data?.message, variant: 'destructive' }),
+  });
+
   const volunteers: Volunteer[] = data?.volunteers ?? [];
 
   const handleCreate = () => {
@@ -134,6 +149,14 @@ export default function VolunteersPage() {
           <Button size="sm" onClick={() => { setShowCreateForm(!showCreateForm); setCreatedPassword(null); }}>
             <UserPlus className="h-4 w-4 mr-1.5" />
             Tạo tài khoản
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => { setShowDeleteAllConfirm(true); setDeleteAllInput(''); }}
+          >
+            <Trash2 className="h-4 w-4 mr-1.5" />
+            Xóa tất cả
           </Button>
         </div>
       </div>
@@ -267,6 +290,56 @@ export default function VolunteersPage() {
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
+
+      {/* Delete all confirmation modal */}
+      {showDeleteAllConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-md mx-4 border-red-200">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <Trash2 className="h-5 w-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Xóa tất cả tình nguyện viên?</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Hành động này sẽ <strong>xóa vĩnh viễn</strong> toàn bộ {volunteers.length > 0 ? `${volunteers.length} ` : ''}tài khoản tình nguyện viên cùng tất cả dữ liệu liên quan. Không thể hoàn tác.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-gray-600">
+                  Nhập <span className="font-mono font-semibold">XOA TAT CA</span> để xác nhận
+                </Label>
+                <Input
+                  value={deleteAllInput}
+                  onChange={(e) => setDeleteAllInput(e.target.value)}
+                  placeholder="XOA TAT CA"
+                  className="border-red-200 focus-visible:ring-red-400"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { setShowDeleteAllConfirm(false); setDeleteAllInput(''); }}
+                  disabled={deleteAllMutation.isPending}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={deleteAllInput !== 'XOA TAT CA' || deleteAllMutation.isPending}
+                  onClick={() => deleteAllMutation.mutate()}
+                >
+                  {deleteAllMutation.isPending ? 'Đang xóa...' : 'Xóa tất cả'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="space-y-2">
         {volunteers.length === 0 && (

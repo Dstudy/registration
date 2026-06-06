@@ -100,6 +100,11 @@ export class AdminController {
     return this.adminService.bulkAssign(user.id, body.shiftId, body.codes);
   }
 
+  @Delete('users')
+  deleteAllUsers() {
+    return this.usersService.deleteAllVolunteers();
+  }
+
   @Post('users')
   createUser(@Body() dto: CreateUserDto) {
     return this.usersService.createUser(dto);

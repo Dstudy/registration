@@ -156,6 +156,11 @@ export class UsersService {
     return null;
   }
 
+  async deleteAllVolunteers() {
+    const result = await this.prisma.user.deleteMany({ where: { role: Role.VOLUNTEER } });
+    return { deleted: result.count };
+  }
+
   private async ensureExists(id: number) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('Không tìm thấy tình nguyện viên');
