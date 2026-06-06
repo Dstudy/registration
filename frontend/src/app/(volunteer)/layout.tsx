@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import { VolunteerSidebar, MobileBottomNav } from '@/components/layout/volunteer-sidebar';
@@ -34,9 +35,9 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
             <NotificationBell />
             <div className="flex items-center gap-2">
               <Link href="/account" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <div className="h-8 w-8 rounded-full bg-blue-100 overflow-hidden flex items-center justify-center shrink-0">
+                <div className="relative h-8 w-8 rounded-full bg-blue-100 overflow-hidden flex items-center justify-center shrink-0">
                   {user.avatar ? (
-                    <img src={user.avatar} alt="Avatar" className="h-full w-full object-cover" />
+                    <Image fill src={user.avatar} alt="Avatar" className="object-cover" />
                   ) : (
                     <span className="text-xs font-bold text-blue-600 select-none">
                       {(user.fullname || user.ma_tnv).split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()}

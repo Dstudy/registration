@@ -26,6 +26,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const res = exception.getResponse();
       message = typeof res === 'string' ? res : (res as any).message || message;
     } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+      this.logger.error(`Prisma error ${exception.code}: ${exception.message}`, exception.stack);
       switch (exception.code) {
         case 'P2002':
           status = HttpStatus.CONFLICT;
@@ -40,9 +41,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           message = 'Dữ liệu liên kết không hợp lệ';
           break;
         default:
-          status = HttpStatus.BAD_REQUEST;
-          message = 'Lỗi dữ liệu';
+          status = HttpStatus.INTERNAL_SERVER_ERROR;
+          message = 'Lỗi cơ sở dữ liệu';
       }
+    } else if (exception instanceof Prisma.PrismaClientInitializationError) {
+      this.logger.error(`Prisma init error: ${exception.message}`, exception.stack);
+      status = HttpStatus.SERVICE_UNAVAILABLE;
+      message = 'Không thể kết nối cơ sở dữ liệu';
     } else if (exception instanceof Error) {
       this.logger.error(exception.message, exception.stack);
     }

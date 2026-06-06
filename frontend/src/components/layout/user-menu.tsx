@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuthStore } from '@/stores/auth.store';
 import { useRouter } from 'next/navigation';
 import { LogOut, UserCircle } from 'lucide-react';
@@ -26,9 +27,9 @@ export function UserMenu() {
   return (
     <div className="flex items-center gap-3">
       <Link href="/admin/account" className="flex items-center gap-2 text-sm hover:opacity-80 transition-opacity">
-        <div className="h-8 w-8 rounded-full bg-blue-100 overflow-hidden flex items-center justify-center shrink-0">
+        <div className="relative h-8 w-8 rounded-full bg-blue-100 overflow-hidden flex items-center justify-center shrink-0">
           {user?.avatar ? (
-            <img src={user.avatar} alt="Avatar" className="h-full w-full object-cover" />
+            <Image fill src={user.avatar} alt="Avatar" className="object-cover" />
           ) : (
             <UserCircle className="h-4 w-4 text-blue-600" />
           )}

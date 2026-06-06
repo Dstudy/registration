@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth.store';
@@ -137,7 +138,7 @@ export function AccountPage() {
               className="relative h-24 w-24 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center group cursor-pointer border-2 border-transparent hover:border-blue-400 transition-all disabled:cursor-not-allowed"
             >
               {avatarSrc ? (
-                <img src={avatarSrc} alt="Avatar" className="h-full w-full object-cover" />
+                <Image fill src={avatarSrc} alt="Avatar" className="object-cover" />
               ) : (
                 <span className="text-2xl font-bold text-blue-600 select-none">{initials || '?'}</span>
               )}
