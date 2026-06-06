@@ -4,12 +4,18 @@ const nextConfig = {
   async rewrites() {
     // Read at runtime so Docker containers pick up BACKEND_URL correctly
     const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3001';
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${backendUrl}/api/:path*`,
-      },
-    ];
+    // afterFiles rewrites run AFTER Next.js filesystem routes (API route handlers),
+    // so /api/auth/* is handled by src/app/api/auth/*/route.ts first.
+    return {
+      beforeFiles: [],
+      afterFiles: [
+        {
+          source: '/api/:path*',
+          destination: `${backendUrl}/api/:path*`,
+        },
+      ],
+      fallback: [],
+    };
   },
 };
 
