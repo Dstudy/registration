@@ -20,13 +20,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Lỗi máy chủ nội bộ';
+    let detail: string | undefined;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const res = exception.getResponse();
       message = typeof res === 'string' ? res : (res as any).message || message;
     } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
-      this.logger.error(`Prisma error ${exception.code}: ${exception.message}`, exception.stack);
+      detail = `[${exception.code}] ${exception.message}`;
+      this.logger.error(`Prisma KnownRequestError ${exception.code}: ${exception.message}`, exception.stack);
       switch (exception.code) {
         case 'P2002':
           status = HttpStatus.CONFLICT;
@@ -45,16 +47,24 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           message = 'Lỗi cơ sở dữ liệu';
       }
     } else if (exception instanceof Prisma.PrismaClientInitializationError) {
-      this.logger.error(`Prisma init error: ${exception.message}`, exception.stack);
+      detail = exception.message;
+      this.logger.error(`Prisma InitializationError: ${exception.message}`, exception.stack);
       status = HttpStatus.SERVICE_UNAVAILABLE;
       message = 'Không thể kết nối cơ sở dữ liệu';
+    } else if (exception instanceof Prisma.PrismaClientValidationError) {
+      detail = exception.message;
+      this.logger.error(`Prisma ValidationError: ${exception.message}`, exception.stack);
+      status = HttpStatus.BAD_REQUEST;
+      message = 'Dữ liệu truy vấn không hợp lệ';
     } else if (exception instanceof Error) {
-      this.logger.error(exception.message, exception.stack);
+      detail = exception.message;
+      this.logger.error(`Unhandled error [${exception.constructor.name}]: ${exception.message}`, exception.stack);
     }
 
     response.status(status).json({
       statusCode: status,
       message,
+      detail,
       timestamp: new Date().toISOString(),
       path: request.url,
     });
