@@ -10,7 +10,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy via SSH
+      - uses: actions/checkout@v4
+
+      - name: Create deployment archive
+        run: |
+          tar --exclude='.git' \
+              --exclude='node_modules' \
+              --exclude='backend/dist' \
+              --exclude='frontend/.next' \
+              -czf deploy.tar.gz .
+
+      - name: Upload archive to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          source: deploy.tar.gz
+          target: /tmp
+
+      - name: Extract and deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -19,8 +39,17 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             set -e
+            mkdir -p ${{ secrets.APP_PATH }}
             cd ${{ secrets.APP_PATH }}
-            git pull origin main
+
+            # Preserve .env so secrets are not overwritten
+            [ -f .env ] && cp .env /tmp/.env.bak
+
+            tar -xzf /tmp/deploy.tar.gz
+            rm /tmp/deploy.tar.gz
+
+            [ -f /tmp/.env.bak ] && mv /tmp/.env.bak .env
+
             docker compose down --remove-orphans
             docker compose up -d --build
             docker image prune -f
