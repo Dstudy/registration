@@ -57,6 +57,7 @@ services:
       DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD:-rootpassword}@mysql:3306/${MYSQL_DATABASE:-vms_db}
       REDIS_URL: redis://redis:6379
       NODE_ENV: production
+      COOKIE_SECURE: "false"
     ports:
       - "3001:3001"
     depends_on:
@@ -74,7 +75,7 @@ services:
     container_name: vms_frontend
     env_file: .env
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3001
+      NEXT_PUBLIC_API_URL: http://${SERVER_HOST:-103.75.185.62}:3001
       BACKEND_URL: http://backend:3001
       BACKEND_INTERNAL_URL: http://backend:3001
       PORT: 3000

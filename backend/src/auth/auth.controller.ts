@@ -18,7 +18,8 @@ import { CurrentUser, JwtUser } from '../common/decorators/current-user.decorato
 
 const COOKIE_OPTS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
+  // Use explicit COOKIE_SECURE env var — prevents secure flag on HTTP-only servers
+  secure: process.env.COOKIE_SECURE === 'true',
   sameSite: 'lax' as const,
   path: '/',
 };
