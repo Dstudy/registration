@@ -2,7 +2,8 @@
 const nextConfig = {
   output: 'standalone',
   async rewrites() {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
+    // Read at runtime so Docker containers pick up BACKEND_URL correctly
+    const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3001';
     return [
       {
         source: '/api/:path*',
