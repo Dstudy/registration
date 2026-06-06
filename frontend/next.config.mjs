@@ -10,6 +10,10 @@ const nextConfig = {
       beforeFiles: [],
       afterFiles: [
         {
+          source: '/uploads/:path*',
+          destination: `${backendUrl}/uploads/:path*`,
+        },
+        {
           source: '/api/:path*',
           destination: `${backendUrl}/api/:path*`,
         },

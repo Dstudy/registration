@@ -1,5 +1,8 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { join, extname } from 'path';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserStatus, Role } from '@prisma/client';
@@ -14,6 +17,23 @@ export class UsersService {
 
   findById(id: number) {
     return this.prisma.user.findUnique({ where: { id } });
+  }
+
+  getProfile(id: number) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        ma_tnv: true,
+        fullname: true,
+        email: true,
+        date_of_birth: true,
+        role: true,
+        status: true,
+        avatar: true,
+        min_shifts_per_month: true,
+      },
+    });
   }
 
   findAll(filters?: { status?: UserStatus; role?: Role; search?: string }) {
@@ -56,6 +76,40 @@ export class UsersService {
         status: true,
         min_shifts_per_month: true,
       },
+    });
+  }
+
+  async changePassword(userId: number, currentPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) throw new BadRequestException('Mật khẩu hiện tại không đúng');
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+
+    return { message: 'Đổi mật khẩu thành công' };
+  }
+
+  async updateAvatar(userId: number, file: { buffer: Buffer; originalname: string }) {
+    const ext = extname(file.originalname).toLowerCase();
+    const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    if (!allowed.includes(ext)) {
+      throw new BadRequestException('Chỉ hỗ trợ định dạng: jpg, jpeg, png, gif, webp');
+    }
+
+    const filename = `${randomBytes(16).toString('hex')}${ext}`;
+    const uploadDir = join(process.cwd(), 'uploads', 'avatars');
+
+    if (!existsSync(uploadDir)) mkdirSync(uploadDir, { recursive: true });
+    writeFileSync(join(uploadDir, filename), file.buffer);
+
+    const avatarUrl = `/uploads/avatars/${filename}`;
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { avatar: avatarUrl },
+      select: { id: true, avatar: true },
     });
   }
 

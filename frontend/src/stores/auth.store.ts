@@ -9,6 +9,7 @@ export interface AuthUser {
   ma_tnv: string;
   fullname?: string;
   role: 'ADMIN' | 'VOLUNTEER';
+  avatar?: string;
 }
 
 interface AuthState {

@@ -10,6 +10,7 @@ import {
   CheckSquare,
   ArrowLeftRight,
   Bell,
+  UserCircle,
 } from 'lucide-react';
 
 const navItems = [
@@ -19,6 +20,7 @@ const navItems = [
   { href: '/check-in', icon: CheckSquare, label: 'Điểm danh' },
   { href: '/requests', icon: ArrowLeftRight, label: 'Yêu cầu' },
   { href: '/notifications', icon: Bell, label: 'Thông báo' },
+  { href: '/account', icon: UserCircle, label: 'Tài khoản' },
 ];
 
 export function VolunteerSidebar() {

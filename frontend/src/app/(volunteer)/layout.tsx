@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
 import { VolunteerSidebar, MobileBottomNav } from '@/components/layout/volunteer-sidebar';
@@ -32,9 +33,20 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-3 ml-auto">
             <NotificationBell />
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-700 font-medium hidden md:block">
-                {user.fullname || user.ma_tnv}
-              </span>
+              <Link href="/account" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <div className="h-8 w-8 rounded-full bg-blue-100 overflow-hidden flex items-center justify-center shrink-0">
+                  {user.avatar ? (
+                    <img src={user.avatar} alt="Avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-xs font-bold text-blue-600 select-none">
+                      {(user.fullname || user.ma_tnv).split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm text-gray-700 font-medium hidden md:block">
+                  {user.fullname || user.ma_tnv}
+                </span>
+              </Link>
               <button
                 onClick={() => logout().then(() => router.push('/login'))}
                 className="text-sm text-gray-500 hover:text-gray-700 transition-colors px-2 py-1 rounded hover:bg-gray-100"
