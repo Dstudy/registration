@@ -2,21 +2,23 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [production]
 
 jobs:
   deploy:
-    - name: Extract and deploy
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USER }}
-        password: ${{ secrets.SSH_PASSWORD }}
-        port: ${{ secrets.SSH_PORT || 22 }}
-        script: |
-          cd /opt/registration
-          git fetch origin
-          git checkout production
-          git pull
-          docker compose down
-          docker compose up -d --build
+    runs-on: ubuntu-latest # Bổ sung hệ điều hành chạy workflow
+    steps: # Bổ sung từ khóa để chứa danh sách các bước
+      - name: Extract and deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd /opt/registration
+            git fetch origin
+            git checkout production
+            git pull
+            docker compose down
+            docker compose up -d --build
