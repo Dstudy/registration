@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsPositive, IsString } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsPositive, IsString } from 'class-validator';
 import { RequestType } from '@prisma/client';
 
 export class CreateRequestDto {
@@ -22,10 +22,6 @@ export class CreateRequestDto {
   @IsOptional()
   @IsString()
   receiverCode?: string; // alternative to receiverId — looked up by ma_tnv
-
-  @IsOptional()
-  @IsBoolean()
-  isPublic?: boolean; // for SUBSTITUTE: broadcast to marketplace
 
   @IsOptional()
   @IsString()

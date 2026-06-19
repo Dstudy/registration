@@ -1,8 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
-import { join, extname } from 'path';
-import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserStatus, Role } from '@prisma/client';
@@ -19,6 +16,29 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
+  findByEmail(email: string) {
+    return this.prisma.user.findUnique({ where: { email } });
+  }
+
+  findByResetToken(hashedToken: string) {
+    return this.prisma.user.findUnique({ where: { resetPasswordToken: hashedToken } });
+  }
+
+  setResetToken(userId: number, hashedToken: string, expires: Date) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { resetPasswordToken: hashedToken, resetPasswordExpires: expires },
+    });
+  }
+
+  async resetPasswordWithToken(userId: number, newPassword: string) {
+    const password = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password, resetPasswordToken: null, resetPasswordExpires: null },
+    });
+  }
+
   getProfile(id: number) {
     return this.prisma.user.findUnique({
       where: { id },
@@ -28,9 +48,9 @@ export class UsersService {
         fullname: true,
         email: true,
         date_of_birth: true,
+        date_joined: true,
         role: true,
         status: true,
-        avatar: true,
         min_shifts_per_month: true,
       },
     });
@@ -92,28 +112,7 @@ export class UsersService {
     return { message: 'Đổi mật khẩu thành công' };
   }
 
-  async updateAvatar(userId: number, file: { buffer: Buffer; originalname: string }) {
-    const ext = extname(file.originalname).toLowerCase();
-    const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-    if (!allowed.includes(ext)) {
-      throw new BadRequestException('Chỉ hỗ trợ định dạng: jpg, jpeg, png, gif, webp');
-    }
-
-    const filename = `${randomBytes(16).toString('hex')}${ext}`;
-    const uploadDir = join(process.cwd(), 'uploads', 'avatars');
-
-    if (!existsSync(uploadDir)) mkdirSync(uploadDir, { recursive: true });
-    writeFileSync(join(uploadDir, filename), file.buffer);
-
-    const avatarUrl = `/uploads/avatars/${filename}`;
-    return this.prisma.user.update({
-      where: { id: userId },
-      data: { avatar: avatarUrl },
-      select: { id: true, avatar: true },
-    });
-  }
-
-  async createUser(dto: { fullname: string; ma_tnv: string; date_of_birth: string; email: string }) {
+  async createUser(dto: { fullname: string; ma_tnv: string; date_of_birth: string; date_joined: string; email: string }) {
     const existing = await this.prisma.user.findUnique({ where: { ma_tnv: dto.ma_tnv } });
     if (existing) throw new ConflictException(`Mã TNV "${dto.ma_tnv}" đã tồn tại`);
 
@@ -127,10 +126,11 @@ export class UsersService {
         fullname: dto.fullname.trim(),
         ma_tnv: dto.ma_tnv.trim(),
         date_of_birth: dto.date_of_birth,
+        date_joined: dto.date_joined,
         email: dto.email.trim(),
         password,
       },
-      select: { id: true, ma_tnv: true, fullname: true, email: true, status: true, date_of_birth: true },
+      select: { id: true, ma_tnv: true, fullname: true, email: true, status: true, date_of_birth: true, date_joined: true },
     });
 
     return { ...user, generatedPassword: rawPassword };
@@ -144,10 +144,11 @@ export class UsersService {
     const nameIdx = headers.indexOf('fullname');
     const idIdx = headers.indexOf('ma_tnv');
     const dobIdx = headers.indexOf('date_of_birth');
+    const joinedIdx = headers.indexOf('date_joined');
     const emailIdx = headers.indexOf('email');
 
-    if (nameIdx === -1 || idIdx === -1 || dobIdx === -1) {
-      throw new BadRequestException('CSV phải có các cột: fullname, ma_tnv, date_of_birth, email');
+    if (nameIdx === -1 || idIdx === -1 || dobIdx === -1 || joinedIdx === -1) {
+      throw new BadRequestException('CSV phải có các cột: fullname, ma_tnv, date_of_birth, date_joined, email');
     }
     if (emailIdx === -1) {
       throw new BadRequestException('CSV phải có cột email');
@@ -160,9 +161,10 @@ export class UsersService {
       const fullname = cols[nameIdx];
       const ma_tnv = cols[idIdx];
       const rawDob = cols[dobIdx];
+      const rawJoined = cols[joinedIdx];
       const email = emailIdx !== -1 ? cols[emailIdx] : '';
 
-      if (!fullname || !ma_tnv || !rawDob) {
+      if (!fullname || !ma_tnv || !rawDob || !rawJoined) {
         results.push({ ma_tnv: ma_tnv || `dòng ${i + 1}`, fullname: fullname || '', status: 'error', reason: 'Thiếu dữ liệu' });
         continue;
       }
@@ -178,8 +180,14 @@ export class UsersService {
         continue;
       }
 
+      const date_joined = this.normalizeDob(rawJoined);
+      if (!date_joined) {
+        results.push({ ma_tnv, fullname, status: 'error', reason: 'Ngày tham gia không hợp lệ (dùng YYYY-MM-DD hoặc DD/MM/YYYY)' });
+        continue;
+      }
+
       try {
-        const result = await this.createUser({ fullname, ma_tnv, date_of_birth, email });
+        const result = await this.createUser({ fullname, ma_tnv, date_of_birth, date_joined, email });
         results.push({ ma_tnv, fullname, status: 'created', generatedPassword: result.generatedPassword });
       } catch (err) {
         results.push({ ma_tnv, fullname, status: 'error', reason: err.message });

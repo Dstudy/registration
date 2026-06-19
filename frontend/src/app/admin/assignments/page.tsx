@@ -20,6 +20,7 @@ interface Shift {
   maxSlots: number;
   isActive: boolean;
   registrationCount: number;
+  hasUnconfirmed?: boolean;
 }
 
 interface Registration {
@@ -109,6 +110,31 @@ export default function AssignmentsPage() {
       toast({
         title: count > 0 ? `Đã xác nhận ${count} đăng ký trong tháng` : 'Tất cả đăng ký đã được xác nhận',
       });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'shift-detail', selectedShiftId] });
+    },
+    onError: (err: any) =>
+      toast({ title: 'Lỗi', description: err?.response?.data?.message, variant: 'destructive' }),
+  });
+
+  const confirmShiftMutation = useMutation({
+    mutationFn: (shiftId: number) =>
+      api.patch('/admin/registrations/confirm-all', { shiftId }).then((r) => r.data),
+    onSuccess: (data: any) => {
+      const count = data.data?.confirmed ?? 0;
+      toast({
+        title: count > 0 ? `Đã xác nhận ${count} TNV trong ca này` : 'Tất cả TNV đã được xác nhận',
+      });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'shift-detail', selectedShiftId] });
+    },
+    onError: (err: any) =>
+      toast({ title: 'Lỗi', description: err?.response?.data?.message, variant: 'destructive' }),
+  });
+
+  const confirmRegMutation = useMutation({
+    mutationFn: (registrationId: number) =>
+      api.patch(`/admin/registrations/${registrationId}/confirm`).then((r) => r.data),
+    onSuccess: () => {
+      toast({ title: 'Đã xác nhận TNV' });
       queryClient.invalidateQueries({ queryKey: ['admin', 'shift-detail', selectedShiftId] });
     },
     onError: (err: any) =>
@@ -278,6 +304,7 @@ export default function AssignmentsPage() {
                           <button
                             key={shift.id}
                             onClick={() => setSelectedShiftId(isSelected ? null : shift.id)}
+                            title={shift.hasUnconfirmed ? 'Có tình nguyện viên chưa xác nhận' : undefined}
                             className={`w-full text-left px-1 py-0.5 rounded text-[10px] leading-tight mb-0.5 border transition-all ${
                               isSelected
                                 ? 'bg-blue-600 text-white border-blue-700 shadow-sm'
@@ -289,11 +316,20 @@ export default function AssignmentsPage() {
                             }`}
                           >
                             <div className="font-medium truncate">{shiftLabel(shift)}</div>
-                            <div className="flex items-center gap-0.5 mt-0.5">
-                              <Users className="h-2.5 w-2.5 shrink-0" />
-                              <span>
-                                {shift.registrationCount}/{shift.maxSlots}
-                              </span>
+                            <div className="flex items-center justify-between gap-1 mt-0.5">
+                              <div className="flex items-center gap-0.5">
+                                <Users className="h-2.5 w-2.5 shrink-0" />
+                                <span>
+                                  {shift.registrationCount}/{shift.maxSlots}
+                                </span>
+                              </div>
+                              {shift.hasUnconfirmed && (
+                                <Clock
+                                  className={`h-2.5 w-2.5 shrink-0 ${
+                                    isSelected ? 'text-amber-200' : 'text-amber-500'
+                                  }`}
+                                />
+                              )}
                             </div>
                           </button>
                         );
@@ -302,8 +338,12 @@ export default function AssignmentsPage() {
                   );
                 })}
               </div>
-              <p className="text-[10px] text-gray-400 mt-2">
-                CS=Ca Sáng · CC=Ca Chiều · CT=Ca Tối · P1/P2=Vị trí · Nhấn vào ca để phân công
+              <p className="text-[10px] text-gray-400 mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                <span>CS=Ca Sáng · CC=Ca Chiều · CT=Ca Tối · P1/P2=Vị trí</span>
+                <span className="inline-flex items-center gap-0.5">
+                  · <Clock className="h-2.5 w-2.5 text-amber-500 shrink-0" /> = Có TNV chưa xác nhận
+                </span>
+                <span>· Nhấn vào ca để phân công</span>
               </p>
             </CardContent>
           </Card>
@@ -339,16 +379,34 @@ export default function AssignmentsPage() {
                   </Button>
                 </div>
                 {shiftDetail && (
-                  <Badge
-                    variant={
-                      shiftDetail.registrations.length >= shiftDetail.maxSlots
-                        ? 'secondary'
-                        : 'default'
-                    }
-                    className="w-fit mt-1"
-                  >
-                    {shiftDetail.registrations.length}/{shiftDetail.maxSlots} chỗ
-                  </Badge>
+                  <div className="flex items-center gap-2 flex-wrap mt-1">
+                    <Badge
+                      variant={
+                        shiftDetail.registrations.length >= shiftDetail.maxSlots
+                          ? 'secondary'
+                          : 'default'
+                      }
+                      className="w-fit"
+                    >
+                      {shiftDetail.registrations.length}/{shiftDetail.maxSlots} chỗ
+                    </Badge>
+                    {shiftDetail.registrations.some((r) => !r.isConfirmed) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2 text-xs"
+                        disabled={confirmShiftMutation.isPending}
+                        onClick={() => confirmShiftMutation.mutate(shiftDetail.id)}
+                      >
+                        {confirmShiftMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        ) : (
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                        )}
+                        Xác nhận tất cả
+                      </Button>
+                    )}
+                  </div>
                 )}
               </CardHeader>
 
@@ -384,7 +442,18 @@ export default function AssignmentsPage() {
                             {reg.isConfirmed ? (
                               <span title="Đã xác nhận"><CheckCircle className="h-4 w-4 text-green-500 shrink-0" /></span>
                             ) : (
-                              <span title="Chờ xác nhận"><Clock className="h-4 w-4 text-amber-400 shrink-0" /></span>
+                              <button
+                                className="h-6 w-6 flex items-center justify-center rounded hover:bg-amber-50 text-amber-400 hover:text-green-500 transition-colors shrink-0 disabled:opacity-40"
+                                title="Chờ xác nhận — bấm để xác nhận"
+                                disabled={confirmRegMutation.isPending}
+                                onClick={() => confirmRegMutation.mutate(reg.id)}
+                              >
+                                {confirmRegMutation.isPending && confirmRegMutation.variables === reg.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Clock className="h-4 w-4" />
+                                )}
+                              </button>
                             )}
                             <button
                               className="h-6 w-6 flex items-center justify-center rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors shrink-0 disabled:opacity-40"

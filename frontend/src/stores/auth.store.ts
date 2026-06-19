@@ -9,15 +9,16 @@ export interface AuthUser {
   ma_tnv: string;
   fullname?: string;
   role: 'ADMIN' | 'VOLUNTEER';
-  avatar?: string;
 }
 
 interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
+  hasHydrated: boolean;
   login: (ma_tnv: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   setUser: (user: AuthUser | null) => void;
+  setHasHydrated: (value: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -25,6 +26,7 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
+      hasHydrated: false,
 
       login: async (ma_tnv, password) => {
         const { data } = await api.post('/auth/login', { ma_tnv, password });
@@ -41,10 +43,15 @@ export const useAuthStore = create<AuthState>()(
       },
 
       setUser: (user) => set({ user, isAuthenticated: !!user }),
+
+      setHasHydrated: (value) => set({ hasHydrated: value }),
     }),
     {
       name: 'vms-auth',
       partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     },
   ),
 );

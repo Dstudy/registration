@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `User` ADD COLUMN `date_joined` VARCHAR(191) NOT NULL DEFAULT '2026-01-01';

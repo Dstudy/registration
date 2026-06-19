@@ -30,14 +30,14 @@ export class RequestsController {
     return this.requestsService.findForUser(user.id);
   }
 
-  @Get('marketplace')
-  findMarketplace(@CurrentUser() user: JwtUser) {
-    return this.requestsService.findPublicRequests(user.id);
+  @Get('swap/candidates')
+  findSwapCandidates(@CurrentUser() user: JwtUser, @Query('search') search?: string) {
+    return this.requestsService.findSwapCandidates(user.id, search);
   }
 
-  @Get('public')
-  findPublic(@CurrentUser() user: JwtUser) {
-    return this.requestsService.findPublicRequests(user.id);
+  @Get('swap/candidates/:id/shifts')
+  findSwapCandidateShifts(@Param('id', ParseIntPipe) id: number) {
+    return this.requestsService.findUpcomingShiftsForUser(id);
   }
 
   @Roles(Role.ADMIN)
@@ -62,12 +62,6 @@ export class RequestsController {
   @HttpCode(HttpStatus.OK)
   cancel(@CurrentUser() user: JwtUser, @Param('id', ParseIntPipe) id: number) {
     return this.requestsService.cancelRequest(user.id, id);
-  }
-
-  @Patch(':id/take')
-  @HttpCode(HttpStatus.OK)
-  take(@CurrentUser() user: JwtUser, @Param('id', ParseIntPipe) id: number) {
-    return this.requestsService.takePublicRequest(user.id, id);
   }
 
   @Roles(Role.ADMIN)

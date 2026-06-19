@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Patch, Delete, Body, Query, Param, ParseIntPipe, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Query, Param, ParseIntPipe, UseInterceptors, UploadedFile, BadRequestException, Res } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
 import { Role } from '@prisma/client';
 import { AdminService } from './admin.service';
 import { BulkAssignDto } from './dto/bulk-assign.dto';
@@ -45,6 +46,17 @@ export class AdminController {
   @Get('kpi')
   getKpiList(@Query('month') month?: string) {
     return this.adminService.getKpiList(month);
+  }
+
+  @Get('reports/shifts/export')
+  async exportShiftReport(@Query('month') month: string, @Res() res: Response) {
+    const monthStr = month || new Date().toISOString().slice(0, 7);
+    const buf = await this.adminService.exportShiftReportExcel(monthStr);
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="bao-cao-ca-truc-${monthStr}.xlsx"`,
+    });
+    res.send(buf);
   }
 
   @Get('attendance')

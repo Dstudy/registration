@@ -45,7 +45,7 @@ export default function VolunteersPage() {
   const [editMinShifts, setEditMinShifts] = useState(2);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createForm, setCreateForm] = useState({ fullname: '', ma_tnv: '', date_of_birth: '', email: '' });
+  const [createForm, setCreateForm] = useState({ fullname: '', ma_tnv: '', date_of_birth: '', date_joined: '', email: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [createdPassword, setCreatedPassword] = useState<string | null>(null);
 
@@ -79,7 +79,7 @@ export default function VolunteersPage() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'volunteers'] });
       setCreatedPassword(data.generatedPassword);
       setShowPassword(false);
-      setCreateForm({ fullname: '', ma_tnv: '', date_of_birth: '', email: '' });
+      setCreateForm({ fullname: '', ma_tnv: '', date_of_birth: '', date_joined: '', email: '' });
       toast({ title: 'Tạo tài khoản thành công' });
     },
     onError: (err: any) =>
@@ -117,7 +117,7 @@ export default function VolunteersPage() {
   const volunteers: Volunteer[] = data?.volunteers ?? [];
 
   const handleCreate = () => {
-    if (!createForm.fullname || !createForm.ma_tnv || !createForm.date_of_birth || !createForm.email) {
+    if (!createForm.fullname || !createForm.ma_tnv || !createForm.date_of_birth || !createForm.date_joined || !createForm.email) {
       toast({ title: 'Vui lòng điền đầy đủ thông tin bắt buộc (bao gồm email)', variant: 'destructive' });
       return;
     }
@@ -163,7 +163,7 @@ export default function VolunteersPage() {
 
       {/* CSV template hint */}
       <p className="text-xs text-gray-400">
-        CSV mẫu: cột <code>fullname</code>, <code>ma_tnv</code>, <code>date_of_birth</code> (YYYY-MM-DD hoặc DD/MM/YYYY), <code>email</code>. Mật khẩu mặc định = mã TNV + ngày sinh (DDMMYYYY).
+        CSV mẫu: cột <code>fullname</code>, <code>ma_tnv</code>, <code>date_of_birth</code>, <code>date_joined</code> (YYYY-MM-DD hoặc DD/MM/YYYY), <code>email</code>. Mật khẩu mặc định = mã TNV + ngày sinh (DDMMYYYY).
       </p>
 
       {/* Create user form */}
@@ -221,6 +221,14 @@ export default function VolunteersPage() {
                     type="date"
                     value={createForm.date_of_birth}
                     onChange={(e) => setCreateForm((f) => ({ ...f, date_of_birth: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Ngày tham gia <span className="text-red-500">*</span></Label>
+                  <Input
+                    type="date"
+                    value={createForm.date_joined}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, date_joined: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-1">
