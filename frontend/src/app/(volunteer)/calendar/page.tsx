@@ -36,11 +36,11 @@ export default function CalendarPage() {
   }, [isRegistrationOpen, targetMonth]);
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col h-full gap-4">
       {/* Month navigation */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Lịch trực</h1>
+          <h1 className="text-2xl font-bold text-brand-blue">Đăng ký trông thư viện</h1>
           <div className="flex items-center gap-2 mt-1">
             {isRegistrationOpen ? (
               <Badge variant="success">Đăng ký đang mở</Badge>
@@ -72,28 +72,10 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="hidden md:flex items-center gap-4 text-xs text-gray-500">
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded bg-red-100 border border-red-300" />
-          <span>Thiếu người (&lt;2)</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded bg-green-100 border border-green-300" />
-          <span>Bình thường (2–4)</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded bg-gray-200" />
-          <span>Đã đầy (5)</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded bg-blue-100 border border-blue-300" />
-          <span>Đã đăng ký</span>
-        </div>
-      </div>
-
       {/* Calendar */}
-      <ShiftCalendar month={month} isRegistrationOpen={isRegistrationOpen} />
+      <div className="flex-1 min-h-0">
+        <ShiftCalendar month={month} isRegistrationOpen={isRegistrationOpen} />
+      </div>
     </div>
   );
 }

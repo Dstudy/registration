@@ -6,7 +6,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { RequestType, RequestStatus, RegistrationType } from '@prisma/client';
+import { RequestType, RequestStatus, RegistrationType, Role, UserStatus } from '@prisma/client';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '@prisma/client';
@@ -52,6 +52,9 @@ export class RequestsService {
       if (!dto.shiftIdTo) {
         throw new BadRequestException('Đổi ca cần có shiftIdTo');
       }
+      if (dto.shiftIdTo === dto.shiftIdFrom) {
+        throw new BadRequestException('Không thể đổi ca với chính ca trực này');
+      }
       // Auto-resolve receiver from whoever registered for shiftIdTo
       if (!resolvedReceiverId) {
         const receiverReg = await this.prisma.registration.findFirst({
@@ -71,6 +74,14 @@ export class RequestsService {
           throw new BadRequestException('Người nhận không có ca trực này để đổi');
         }
       }
+    }
+
+    if (!resolvedReceiverId) {
+      throw new BadRequestException('Vui lòng chọn người nhận yêu cầu');
+    }
+
+    if (resolvedReceiverId === senderId) {
+      throw new BadRequestException('Không thể gửi yêu cầu cho chính mình');
     }
 
     const request = await this.prisma.shiftRequest.create({
@@ -291,6 +302,40 @@ export class RequestsService {
 
   // ─── Queries ────────────────────────────────
 
+  findSwapCandidates(currentUserId: number, search?: string) {
+    const now = new Date();
+    return this.prisma.user.findMany({
+      where: {
+        id: { not: currentUserId },
+        role: Role.VOLUNTEER,
+        status: UserStatus.ACTIVE,
+        registrations: { some: { shift: { date: { gte: now } } } },
+        ...(search && {
+          OR: [
+            { fullname: { contains: search } },
+            { ma_tnv: { contains: search } },
+          ],
+        }),
+      },
+      orderBy: { fullname: 'asc' },
+      select: { id: true, ma_tnv: true, fullname: true },
+      take: 20,
+    });
+  }
+
+  findUpcomingShiftsForUser(userId: number) {
+    const now = new Date();
+    return this.prisma.registration.findMany({
+      where: { userId, shift: { date: { gte: now } } },
+      include: {
+        shift: {
+          select: { id: true, date: true, shiftName: true, position: true, startTime: true, endTime: true },
+        },
+      },
+      orderBy: { shift: { date: 'asc' } },
+    });
+  }
+
   findForUser(userId: number) {
     return this.prisma.shiftRequest.findMany({
       where: {
@@ -301,21 +346,6 @@ export class RequestsService {
         receiver: { select: { id: true, ma_tnv: true, fullname: true } },
         shiftFrom: { select: { id: true, date: true, shiftName: true, position: true } },
         shiftTo: { select: { id: true, date: true, shiftName: true, position: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  findPublicRequests(userId: number) {
-    return this.prisma.shiftRequest.findMany({
-      where: {
-        receiverId: null,
-        status: RequestStatus.PENDING,
-        senderId: { not: userId },
-      },
-      include: {
-        sender: { select: { id: true, ma_tnv: true, fullname: true } },
-        shiftFrom: { select: { id: true, date: true, shiftName: true, position: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -341,34 +371,6 @@ export class RequestsService {
         shiftTo: { select: { id: true, date: true, shiftName: true, position: true } },
       },
       orderBy: { updatedAt: 'desc' },
-    });
-  }
-
-  async takePublicRequest(takerId: number, requestId: number) {
-    const request = await this.getRequestOrThrow(requestId);
-
-    if (request.receiverId !== null) {
-      throw new BadRequestException('Yêu cầu này đã có người nhận');
-    }
-    if (request.status !== RequestStatus.PENDING) {
-      throw new BadRequestException('Yêu cầu không còn khả dụng');
-    }
-    if (request.senderId === takerId) {
-      throw new BadRequestException('Bạn không thể nhận yêu cầu của chính mình');
-    }
-
-    // Taker will gain shiftIdFrom — check for same-shift conflict
-    const shiftFrom = await this.prisma.shiftInstance.findUnique({
-      where: { id: request.shiftIdFrom },
-      select: { date: true, shiftName: true },
-    });
-    if (shiftFrom) {
-      await this.checkSameShiftConflict(takerId, request.shiftIdFrom, shiftFrom.date, shiftFrom.shiftName);
-    }
-
-    return this.prisma.shiftRequest.update({
-      where: { id: requestId },
-      data: { receiverId: takerId, status: RequestStatus.ACCEPTED_BY_RECEIVER },
     });
   }
 

@@ -71,10 +71,13 @@ model User {
   fullname             String
   email                String     @unique
   date_of_birth        String?
+  date_joined          String     @default("2026-01-01")
   role                 Role       @default(VOLUNTEER)
   status               UserStatus @default(ACTIVE)
   min_shifts_per_month Int        @default(2)
-  avatar               String?
+
+  resetPasswordToken   String?    @unique
+  resetPasswordExpires DateTime?
 
   registrations    Registration[]
   sentRequests     ShiftRequest[] @relation("Sender")

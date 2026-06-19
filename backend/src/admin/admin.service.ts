@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegistrationsService } from '../registrations/registrations.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -98,6 +99,56 @@ export class AdminService {
         deficit: v.min_shifts_per_month - v._count.registrations,
       }))
       .sort((a, b) => b.deficit - a.deficit);
+  }
+
+  async exportShiftReportExcel(month: string): Promise<Buffer> {
+    const [year, m] = month.split('-').map(Number);
+    const startDate = new Date(Date.UTC(year, m - 1, 1));
+    const endDate = new Date(Date.UTC(year, m, 0, 23, 59, 59));
+
+    const registrations = await this.prisma.registration.findMany({
+      where: { shift: { date: { gte: startDate, lte: endDate } } },
+      include: {
+        user: { select: { ma_tnv: true, fullname: true } },
+        shift: { select: { date: true, position: true, startTime: true, endTime: true } },
+      },
+      orderBy: [{ user: { fullname: 'asc' } }, { shift: { date: 'asc' } }],
+    });
+
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const formatDate = (d: Date) => `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
+    const formatTime = (t: Date) => `${pad(t.getUTCHours())}:${pad(t.getUTCMinutes())}`;
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet(`Báo cáo ${month}`);
+
+    ws.columns = [
+      { header: 'Họ tên', key: 'fullname', width: 28 },
+      { header: 'Mã TNV', key: 'ma_tnv', width: 14 },
+      { header: 'Địa điểm', key: 'place', width: 16 },
+      { header: 'Ngày trực', key: 'day', width: 14 },
+      { header: 'Giờ trực', key: 'hours', width: 18 },
+    ];
+
+    const headerRow = ws.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Arial', size: 11 };
+    headerRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3864' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    });
+
+    for (const reg of registrations) {
+      ws.addRow({
+        fullname: reg.user.fullname,
+        ma_tnv: reg.user.ma_tnv,
+        place: POSITION_LABELS[reg.shift.position] ?? reg.shift.position,
+        day: formatDate(new Date(reg.shift.date)),
+        hours: `${formatTime(new Date(reg.shift.startTime))} - ${formatTime(new Date(reg.shift.endTime))}`,
+      });
+    }
+
+    const buf = await wb.xlsx.writeBuffer();
+    return Buffer.from(buf);
   }
 
   async bulkAssign(adminId: number, shiftId: number, maTnvList: string[]) {

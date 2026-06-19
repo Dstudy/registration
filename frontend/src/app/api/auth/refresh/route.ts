@@ -43,7 +43,8 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  const data = await backendRes.json();
+  const text = await backendRes.text();
+  const data = text ? JSON.parse(text) : null;
 
   if (!backendRes.ok) {
     return NextResponse.json(data, { status: backendRes.status });

@@ -161,12 +161,6 @@ Trạng thái chuyển sang ACCEPTED_BY_RECEIVER. Thông báo bắn tới BNS.
 BNS duyệt trên Dashboard -> Hệ thống tự động cập nhật Registrations:
 Xóa/Ẩn bản ghi của TNV A tại ca đó.
 Thêm bản ghi cho TNV B với registration_type = 'SUBSTITUTE'.
-B. Yêu cầu công khai (Broadcast Request - "Chợ ca")
-Nếu TNV A không biết nhờ ai, họ có thể treo yêu cầu lên một "Chợ ca":
-TNV A đăng tin nhờ trông hộ ca ngày X.
-Tất cả TNV khác (đang rảnh giờ đó) nhận được thông báo hoặc thấy tin trong mục "Ca trống cần người".
-TNV C thấy phù hợp và bấm "Nhận ca".
-Luồng tiếp tục quay về bước duyệt của BNS.
 
 3. Cập nhật Dashboard BNS (Dành cho Trưởng bộ phận)
 Để tính năng này không làm loạn hệ thống, BNS cần một giao diện quản lý yêu cầu (Request Management):
@@ -537,12 +531,6 @@ A requests B
 → Admin approves
 → Registrations update transactionally
 
-Marketplace Substitute
-Flow:
-Volunteer posts shift
-→ Others can claim
-→ Admin approves
-→ Registration transfer occurs
 
 Validation Rules
 System must detect:

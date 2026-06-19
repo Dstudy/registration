@@ -49,21 +49,30 @@ export class ShiftsService {
       where: { date: { gte: startDate, lte: endDate } },
       include: {
         _count: { select: { registrations: true } },
-        registrations: userId
-          ? { where: { userId }, select: { id: true } }
-          : false,
+        registrations: {
+          select: {
+            id: true,
+            userId: true,
+            isConfirmed: true,
+          },
+        },
       },
       orderBy: [{ date: 'asc' }, { shiftName: 'asc' }, { position: 'asc' }],
     });
 
-    return shifts.map((s) => ({
-      ...s,
-      registrationCount: s._count.registrations,
-      isUserRegistered: userId ? s.registrations.length > 0 : undefined,
-      userRegistrationId: userId ? (s.registrations[0]?.id ?? null) : undefined,
-      _count: undefined,
-      registrations: undefined,
-    }));
+    return shifts.map((s) => {
+      const userReg = userId ? s.registrations.find((r) => r.userId === userId) : null;
+      const hasUnconfirmed = s.registrations.some((r) => !r.isConfirmed);
+      return {
+        ...s,
+        registrationCount: s._count.registrations,
+        isUserRegistered: !!userReg,
+        userRegistrationId: userReg ? userReg.id : null,
+        hasUnconfirmed,
+        _count: undefined,
+        registrations: undefined,
+      };
+    });
   }
 
   async findUpcoming() {

@@ -51,6 +51,27 @@ export class MailService {
     });
   }
 
+  async sendPasswordResetEmail(opts: { to: string; fullname: string; token: string }) {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    const resetUrl = `${frontendUrl}/reset-password?token=${opts.token}`;
+
+    await this.send({
+      to: opts.to,
+      subject: '[VMS] Yêu cầu đặt lại mật khẩu',
+      html: `
+        <p>Xin chào <strong>${opts.fullname}</strong>,</p>
+        <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.</p>
+        <p>Vui lòng nhấn vào nút bên dưới để đặt lại mật khẩu (liên kết có hiệu lực trong 1 giờ):</p>
+        <a href="${resetUrl}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:4px;">
+          Đặt lại mật khẩu
+        </a>
+        <p style="color:#666;margin-top:20px;font-size:12px;">
+          Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.
+        </p>
+      `,
+    });
+  }
+
   async sendShiftReminder(opts: {
     to: string;
     fullname: string;

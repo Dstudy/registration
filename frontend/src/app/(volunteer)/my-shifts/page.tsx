@@ -12,7 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
 import api from '@/lib/api';
-import { ArrowLeftRight, CheckCircle, Clock, MapPin } from 'lucide-react';
+import { ArrowLeftRight, Bell, MapPin } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const ATTENDANCE_LABEL: Record<string, { label: string; variant: any }> = {
   PRESENT: { label: 'Có mặt', variant: 'success' },
@@ -21,6 +22,15 @@ const ATTENDANCE_LABEL: Record<string, { label: string; variant: any }> = {
   FORGOT: { label: 'Quên', variant: 'warning' },
   UNCONFIRMED: { label: 'Chưa xác nhận', variant: 'secondary' },
 };
+
+// Format start/end time without timezone shift, matching the calendar's display.
+function formatShiftTimeRange(reg: any) {
+  const start = reg.shift?.startTime ? new Date(reg.shift.startTime) : null;
+  const end = reg.shift?.endTime ? new Date(reg.shift.endTime) : null;
+  if (!start || !end) return reg.shift?.shiftName ?? '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(start.getUTCHours())}:${pad(start.getUTCMinutes())} - ${pad(end.getUTCHours())}:${pad(end.getUTCMinutes())}`;
+}
 
 function ShiftCard({
   reg,
@@ -31,55 +41,79 @@ function ShiftCard({
   showAttendance?: boolean;
   onRequest?: () => void;
 }) {
+  const isPlace1 = reg.shift?.position === 'PLACE_1';
+  const accent = isPlace1 ? 'bg-brand-blue' : 'bg-brand-orange';
+  const accentText = isPlace1 ? 'text-brand-blue' : 'text-brand-orange';
+
   return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1 flex-1">
-            <div className="flex items-center gap-2">
-              <p className="font-semibold">{reg.shift?.shiftName}</p>
-              {reg.isConfirmed ? (
-                <CheckCircle className="h-4 w-4 text-green-500" />
-              ) : (
-                <Clock className="h-4 w-4 text-yellow-500" />
-              )}
-            </div>
-            <p className="text-sm text-gray-600">
-              {reg.shift?.date && format(new Date(reg.shift.date), 'EEEE, dd/MM/yyyy', { locale: vi })}
-            </p>
-            <div className="flex items-center gap-1 text-sm text-gray-500">
-              <MapPin className="h-3 w-3" />
-              {reg.shift?.position === 'PLACE_1' ? 'Địa điểm 1' : 'Địa điểm 2'}
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-2 shrink-0">
-            <Badge variant={reg.isConfirmed ? 'success' : 'warning'}>
-              {reg.isConfirmed ? 'Đã xác nhận' : 'Chờ xác nhận'}
-            </Badge>
-            {showAttendance && reg.attendance && (
-              <Badge variant={ATTENDANCE_LABEL[reg.attendance.status]?.variant}>
-                {ATTENDANCE_LABEL[reg.attendance.status]?.label}
-              </Badge>
-            )}
-            {onRequest && (
-              <Button size="sm" variant="outline" onClick={onRequest}>
-                <ArrowLeftRight className="h-3 w-3 mr-1" />
-                Yêu cầu
-              </Button>
-            )}
-          </div>
+    <div className="rounded-2xl overflow-hidden border shadow-sm">
+      <div className={cn('flex items-center justify-between px-6 py-4 text-white', accent)}>
+        <span className="text-base md:text-lg font-bold tracking-wide flex items-center gap-2">
+          <MapPin className="h-5 w-5" />
+          THƯ VIỆN DƯƠNG LIỄU {isPlace1 ? 'CƠ SỞ 1' : 'CƠ SỞ 2'}
+        </span>
+        <button
+          type="button"
+          className="flex items-center gap-1 text-sm md:text-base font-medium hover:opacity-80 transition-opacity"
+        >
+          <Bell className="h-4 w-4" />
+          Nhắc tôi!
+        </button>
+      </div>
+      <div className="bg-white flex flex-wrap items-center justify-between gap-4 px-6 py-8 md:px-10 md:py-10">
+        <div className="flex flex-wrap items-center gap-x-10 gap-y-3">
+          <span className={cn('text-3xl md:text-4xl font-extrabold', accentText)}>
+            {reg.shift?.date && format(new Date(reg.shift.date), 'dd/MM/yyyy')}
+          </span>
+          <span className="text-3xl md:text-4xl font-extrabold text-gray-800">
+            {formatShiftTimeRange(reg)}
+          </span>
         </div>
-      </CardContent>
-    </Card>
+        <div className="flex items-center gap-2">
+          <Badge variant={reg.isConfirmed ? 'success' : 'warning'}>
+            {reg.isConfirmed ? 'Đã xác nhận' : 'Chờ xác nhận'}
+          </Badge>
+          {showAttendance && reg.attendance && (
+            <Badge variant={ATTENDANCE_LABEL[reg.attendance.status]?.variant}>
+              {ATTENDANCE_LABEL[reg.attendance.status]?.label}
+            </Badge>
+          )}
+          {onRequest && (
+            <Button size="sm" variant="outline" onClick={onRequest}>
+              <ArrowLeftRight className="h-3 w-3 mr-1" />
+              Yêu cầu
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
 function RequestDialog({ shiftId, shiftName, onClose }: { shiftId: number; shiftName: string; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [type, setType] = useState<'SWAP' | 'SUBSTITUTE'>('SUBSTITUTE');
+
+  // SWAP wizard state (shiftIdFrom is already known — start at partner search)
+  const [swapStep, setSwapStep] = useState<1 | 2>(1);
+  const [partner, setPartner] = useState<any | null>(null);
+  const [partnerShift, setPartnerShift] = useState<any | null>(null);
+  const [partnerSearch, setPartnerSearch] = useState('');
+
   const [receiverCode, setReceiverCode] = useState('');
-  const [isPublic, setIsPublic] = useState(false);
   const [note, setNote] = useState('');
+
+  const { data: candidates = [] } = useQuery({
+    queryKey: ['swap-candidates', partnerSearch],
+    queryFn: () => api.get(`/requests/swap/candidates?search=${encodeURIComponent(partnerSearch)}`).then((r) => r.data.data),
+    enabled: type === 'SWAP' && swapStep === 1,
+  });
+
+  const { data: partnerShifts = [] } = useQuery({
+    queryKey: ['swap-candidate-shifts', partner?.id],
+    queryFn: () => api.get(`/requests/swap/candidates/${partner.id}/shifts`).then((r) => r.data.data),
+    enabled: type === 'SWAP' && swapStep === 2 && !!partner,
+  });
 
   const createMutation = useMutation({
     mutationFn: (body: object) => api.post('/requests', body),
@@ -96,16 +130,27 @@ function RequestDialog({ shiftId, shiftName, onClose }: { shiftId: number; shift
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const body: any = { type, shiftIdFrom: shiftId, note: note || undefined };
     if (type === 'SWAP') {
-      body.shiftIdTo = shiftId;
-      body.receiverCode = receiverCode;
+      if (!partner || !partnerShift) return;
+      createMutation.mutate({
+        type,
+        shiftIdFrom: shiftId,
+        shiftIdTo: partnerShift.id,
+        receiverId: partner.id,
+        note: note || undefined,
+      });
     } else {
-      body.isPublic = isPublic;
-      if (!isPublic) body.receiverCode = receiverCode;
+      createMutation.mutate({
+        type,
+        shiftIdFrom: shiftId,
+        note: note || undefined,
+        receiverCode,
+      });
     }
-    createMutation.mutate(body);
   };
+
+  const formatShift = (shift: any) =>
+    `${shift.shiftName} — ${format(new Date(shift.date), 'EEEE dd/MM/yyyy', { locale: vi })} (${shift.position === 'PLACE_1' ? 'Vị trí 1' : 'Vị trí 2'})`;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -127,7 +172,7 @@ function RequestDialog({ shiftId, shiftName, onClose }: { shiftId: number; shift
                 </button>
                 <button
                   type="button"
-                  onClick={() => setType('SWAP')}
+                  onClick={() => { setType('SWAP'); setSwapStep(1); }}
                   className={`flex-1 py-2 rounded-md border text-sm font-medium transition-colors ${type === 'SWAP' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'border-gray-200 text-gray-600'}`}
                 >
                   Đổi ca
@@ -135,24 +180,64 @@ function RequestDialog({ shiftId, shiftName, onClose }: { shiftId: number; shift
               </div>
             </div>
 
-            {type === 'SUBSTITUTE' && (
-              <div className="flex items-center gap-2">
-                <input
-                  id="isPublic"
-                  type="checkbox"
-                  checked={isPublic}
-                  onChange={(e) => setIsPublic(e.target.checked)}
-                  className="rounded border-gray-300"
-                />
-                <Label htmlFor="isPublic">Đăng lên Chợ ca (công khai)</Label>
+            {type === 'SWAP' && (
+              <div className="space-y-3">
+                {swapStep === 1 && (
+                  <div className="space-y-2">
+                    <Label>Bước 1: Tìm người muốn đổi ca *</Label>
+                    <Input
+                      placeholder="Nhập tên hoặc mã TNV..."
+                      value={partnerSearch}
+                      onChange={(e) => setPartnerSearch(e.target.value)}
+                    />
+                    <div className="space-y-2 max-h-56 overflow-y-auto">
+                      {candidates.length === 0 && (
+                        <p className="text-sm text-gray-500">Không tìm thấy tình nguyện viên phù hợp</p>
+                      )}
+                      {candidates.map((c: any) => (
+                        <button
+                          type="button"
+                          key={c.id}
+                          onClick={() => { setPartner(c); setPartnerShift(null); setSwapStep(2); }}
+                          className="w-full text-left p-3 rounded-md border border-gray-200 hover:bg-gray-50 text-sm transition-colors"
+                        >
+                          <span className="font-medium">{c.fullname}</span>
+                          <span className="text-gray-500"> ({c.ma_tnv})</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {swapStep === 2 && (
+                  <div className="space-y-2">
+                    <Label>Bước 2: Chọn ca của {partner.fullname} muốn đổi *</Label>
+                    <div className="space-y-2 max-h-56 overflow-y-auto">
+                      {partnerShifts.length === 0 && (
+                        <p className="text-sm text-gray-500">Người này không có ca trực sắp tới nào</p>
+                      )}
+                      {partnerShifts.map((reg: any) => (
+                        <button
+                          type="button"
+                          key={reg.id}
+                          onClick={() => setPartnerShift(reg.shift)}
+                          className={`w-full text-left p-3 rounded-md border text-sm transition-colors ${partnerShift?.id === reg.shift.id ? 'bg-blue-50 border-blue-500 text-blue-700' : 'border-gray-200 hover:bg-gray-50'}`}
+                        >
+                          {formatShift(reg.shift)}
+                        </button>
+                      ))}
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setSwapStep(1)}>
+                      ← Quay lại
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
-            {(type === 'SWAP' || (type === 'SUBSTITUTE' && !isPublic)) && (
+            {type === 'SUBSTITUTE' && (
               <div className="space-y-2">
-                <Label htmlFor="receiverCode">
-                  {type === 'SWAP' ? 'Mã TNV cần đổi *' : 'Mã TNV thay thế *'}
-                </Label>
+                <Label htmlFor="receiverCode">Mã TNV thay thế *</Label>
                 <Input
                   id="receiverCode"
                   placeholder="Ví dụ: B22DCPT002"
@@ -175,7 +260,11 @@ function RequestDialog({ shiftId, shiftName, onClose }: { shiftId: number; shift
             </div>
 
             <div className="flex gap-2 pt-2">
-              <Button type="submit" disabled={createMutation.isPending} className="flex-1">
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || (type === 'SWAP' && (!partner || !partnerShift))}
+                className="flex-1"
+              >
                 {createMutation.isPending ? 'Đang gửi...' : 'Gửi yêu cầu'}
               </Button>
               <Button type="button" variant="outline" onClick={onClose}>
@@ -213,7 +302,7 @@ export default function MyShiftsPage() {
         <button
           onClick={() => setTab('upcoming')}
           className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
-            tab === 'upcoming' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            tab === 'upcoming' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
           Sắp tới ({upcoming.length})
@@ -221,7 +310,7 @@ export default function MyShiftsPage() {
         <button
           onClick={() => setTab('past')}
           className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
-            tab === 'past' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            tab === 'past' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
           Đã qua ({past.length})
@@ -231,7 +320,7 @@ export default function MyShiftsPage() {
       {!data.length ? (
         <p className="text-center text-gray-500 py-8">Không có ca trực nào</p>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-6 md:space-y-8 max-w-4xl mx-auto px-2 md:px-8">
           {data.map((reg: any) => (
             <ShiftCard
               key={reg.id}

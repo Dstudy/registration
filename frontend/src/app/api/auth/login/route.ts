@@ -33,7 +33,12 @@ function applyBackendCookies(backendRes: Response, response: NextResponse) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ message: 'Dữ liệu không hợp lệ' }, { status: 400 });
+  }
 
   const backendRes = await fetch(`${BACKEND}/api/auth/login`, {
     method: 'POST',
@@ -41,7 +46,8 @@ export async function POST(request: NextRequest) {
     body: JSON.stringify(body),
   });
 
-  const data = await backendRes.json();
+  const text = await backendRes.text();
+  const data = text ? JSON.parse(text) : null;
 
   if (!backendRes.ok) {
     return NextResponse.json(data, { status: backendRes.status });
