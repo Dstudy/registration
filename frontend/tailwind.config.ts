@@ -56,6 +56,7 @@ const config: Config = {
           orange: '#F5A623',
           'orange-dark': '#F2871A',
           bg: '#F7F8FA',
+          red: '#fd6338',
         },
       },
       borderRadius: {

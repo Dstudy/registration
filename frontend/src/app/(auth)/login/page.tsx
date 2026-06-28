@@ -11,6 +11,8 @@ import { toast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/brand/logo';
 import { ArchRow } from '@/components/brand/arches';
+import { clsx } from 'clsx';
+import styles from './index.module.css';
 
 const loginSchema = z.object({
   ma_tnv: z.string().min(1, 'Vui lòng nhập mã TNV'),
@@ -52,33 +54,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden flex items-center justify-center bg-brand-bg p-4">
-      {/* Decorative arches */}
-      <ArchRow
-        color="#C7D2FE"
-        count={4}
-        radius={110}
-        className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 w-[640px] opacity-70"
-      />
-      <ArchRow
-        color="#FBE2C8"
-        count={3}
-        radius={140}
-        className="pointer-events-none absolute -bottom-10 -left-24 w-[520px] opacity-70"
-      />
-      <ArchRow
-        color="#C7D2FE"
-        count={3}
-        radius={140}
-        className="pointer-events-none absolute -bottom-10 -right-24 w-[520px] opacity-70"
-      />
-
-      <div className="relative w-full max-w-md rounded-[2rem] rounded-tr-[5rem] bg-white border border-brand-blue/30 shadow-xl px-8 py-10">
-        <div className="flex flex-col items-center text-center gap-6">
+    <div className={clsx(styles.background, "relative min-h-screen overflow-hidden flex items-center justify-center bg-brand-bg p-4")}>
+      <div className="relative w-full max-w-md rounded-tr-[5rem] bg-white border border-brand-blue shadow-xl px-8 py-10">
+        <div className="flex flex-col items-center text-center gap-10">
           <Logo />
 
           <div>
-            <h1 className="text-xl font-extrabold text-brand-blue leading-snug">
+            <h1 className="text-xl font-bold text-brand-blue leading-snug">
               Hệ thống quản lý
               <br />
               lịch trông Thư viện Dương Liễu

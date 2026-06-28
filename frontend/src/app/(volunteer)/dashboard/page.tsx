@@ -5,27 +5,17 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth.store";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
 import api from "@/lib/api";
 import {
-  Calendar,
   Clock,
-  CheckCircle,
-  Sparkles,
   CheckCircle2,
   ArrowLeftRight,
 } from "lucide-react";
-import { format, differenceInDays } from "date-fns";
-import { vi } from "date-fns/locale";
-import { ArchRow } from "@/components/brand/arches";
+import { differenceInDays } from "date-fns";
 import { Logo } from "@/components/brand/logo";
 import { NotificationBell } from "@/components/layout/notification-bell";
-
-function formatDate(dateStr: string) {
-  return format(new Date(dateStr), "EEEE, dd/MM/yyyy", { locale: vi });
-}
+import EllipseRings from "@/components/ui/ellipse-rings";
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
@@ -73,15 +63,8 @@ export default function DashboardPage() {
     : null;
 
   return (
-    <div className="space-y-6">
-      {/* Hero */}
-      <div className="relative overflow-hidden rounded-3xl bg-white border px-6 py-8 md:px-10 md:py-10">
-        <ArchRow
-          color="#C7D2FE"
-          count={4}
-          radius={90}
-          className="pointer-events-none absolute -top-6 right-0 w-[460px] opacity-60"
-        />
+    <>
+      <div className="relative overflow-hidden rounded-3xl p-10 md:p-16" >
         <div className="relative flex items-center justify-between">
           <Logo />
           <div className="flex items-center gap-3">
@@ -99,41 +82,41 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
-        <div className="relative mt-6">
-          <h1 className="text-3xl md:text-5xl font-extrabold text-brand-blue">
-            Xin chào {user?.fullname || user?.ma_tnv}!
-          </h1>
-          <p className="mt-3 text-brand-blue font-bold">
-            Tháng này bạn đang có: {String(monthShiftCount).padStart(2, "0")}{" "}
-            lịch trông
-          </p>
+        <div className="flex gap-3 mt-10 md:mt-10">
+          <EllipseRings size={60} />
+          <div className="pt-3">
+            <h1 className="text-3xl md:text-5xl font-normal text-brand-blue">
+              Xin chào {user?.fullname || user?.ma_tnv}!
+            </h1>
+            <p className="mt-3 text-brand-blue font-normal">
+              Tháng này bạn đang có: {String(monthShiftCount).padStart(2, "0")}{" "}
+              lịch trông
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Quick links - cascading colored bars */}
-      <div className="flex flex-col">
-        <Link
-          href="/calendar"
-          className="relative z-10 flex items-center gap-2 rounded-3xl bg-brand-orange px-6 py-8 md:px-10 md:py-10 text-sm md:text-base font-bold tracking-wide text-white hover:opacity-90 transition-opacity"
-        >
-          <CheckCircle2 className="h-5 w-5" />
-          ĐĂNG KÝ TRÔNG THƯ VIỆN
-        </Link>
-        <Link
-          href="/my-shifts"
-          className="relative z-20 -mt-6 ml-6 md:ml-12 flex items-center gap-2 rounded-3xl rounded-tl-[2.5rem] bg-brand-blue px-6 py-8 md:px-10 md:py-10 text-sm md:text-base font-bold tracking-wide text-white hover:opacity-90 transition-opacity"
-        >
-          <Clock className="h-5 w-5" />
-          CA TRÔNG CỦA TÔI
-        </Link>
-        <Link
-          href="/requests"
-          className="relative z-30 -mt-6 ml-12 md:ml-24 flex items-center gap-2 rounded-3xl rounded-tl-[2.5rem] bg-brand-blue-light px-6 py-8 md:px-10 md:py-10 text-sm md:text-base font-bold tracking-wide text-white hover:opacity-90 transition-opacity"
-        >
-          <ArrowLeftRight className="h-5 w-5" />
-          YÊU CẦU CA TRỰC
-        </Link>
-      </div>
-    </div>
+      <Link
+        href="/calendar"
+        className="h-[180px] md:h-[300px] lg:h-[450px] rounded-tl-[40px] md:rounded-tl-[60px] pl-14 pt-5 md:pl-20 md:pt-10 lg:pl-28 lg:pt-16 text-sm md:text-base font-bold tracking-wide text-white fixed bottom-0 w-full flex gap-2 z-1 bg-brand-orange hover:bg-[#ef9500] transition-all"
+      >
+        <CheckCircle2 className="h-5 w-5 mt-0.5" />
+        ĐĂNG KÝ TRÔNG THƯ VIỆN
+      </Link>
+      <Link
+        href="/my-shifts"
+        className="h-[120px] md:h-[200px] lg:h-[300px] rounded-tl-[40px] md:rounded-tl-[60px] ml-14 md:ml-20 lg:ml-28 pl-14 pt-5 md:pl-20 md:pt-10 lg:pl-28 lg:pt-16 text-sm md:text-base font-bold tracking-wide text-white fixed bottom-0 w-full flex gap-2 z-2 bg-brand-blue hover:bg-[#3b4ac8] transition-all"
+      >
+        <Clock className="h-5 w-5 mt-0.5" />
+        CA TRÔNG CỦA TÔI
+      </Link>
+      <Link
+        href="/requests"
+        className="h-[60px] md:h-[100px] lg:h-[150px] rounded-tl-[40px] md:rounded-tl-[60px] ml-28 md:ml-40 lg:ml-56 pl-14 pt-5 md:pl-20 md:pt-10 lg:pl-28 lg:pt-16 text-sm md:text-base font-bold tracking-wide text-white fixed bottom-0 w-full flex gap-2 z-3 bg-brand-blue-light hover:bg-[#6fb3f1] transition-all"
+      >
+        <ArrowLeftRight className="h-5 w-5 mt-0.5" />
+        YÊU CẦU CA TRỰC
+      </Link>
+    </>
   );
 }

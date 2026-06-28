@@ -42,26 +42,25 @@ function ShiftCard({
   onRequest?: () => void;
 }) {
   const isPlace1 = reg.shift?.position === 'PLACE_1';
-  const accent = isPlace1 ? 'bg-brand-blue' : 'bg-brand-orange';
-  const accentText = isPlace1 ? 'text-brand-blue' : 'text-brand-orange';
+  const accent = isPlace1 ? 'bg-brand-blue' : 'bg-brand-red';
+  const accentText = isPlace1 ? 'text-brand-blue' : 'text-brand-red';
 
   return (
-    <div className="rounded-2xl overflow-hidden border shadow-sm">
-      <div className={cn('flex items-center justify-between px-6 py-4 text-white', accent)}>
+    <div className={cn("rounded-bl-2xl rounded-br-3xl overflow-hidden border-2 shadow-sm", isPlace1 ? "border-brand-blue" : "border-brand-red")}>
+      <div className={cn('relative flex items-center justify-center py-4 text-white', accent)}>
         <span className="text-base md:text-lg font-bold tracking-wide flex items-center gap-2">
-          <MapPin className="h-5 w-5" />
           THƯ VIỆN DƯƠNG LIỄU {isPlace1 ? 'CƠ SỞ 1' : 'CƠ SỞ 2'}
         </span>
         <button
           type="button"
-          className="flex items-center gap-1 text-sm md:text-base font-medium hover:opacity-80 transition-opacity"
+          className="flex items-center gap-1 text-sm md:text-base font-medium hover:opacity-80 transition-opacity absolute right-5"
         >
           <Bell className="h-4 w-4" />
           Nhắc tôi!
         </button>
       </div>
-      <div className="bg-white flex flex-wrap items-center justify-between gap-4 px-6 py-8 md:px-10 md:py-10">
-        <div className="flex flex-wrap items-center gap-x-10 gap-y-3">
+      <div className="bg-white flex flex-wrap items-center justify-between">
+        <div className={cn("flex flex-1 flex-wrap items-center justify-center gap-x-10 gap-y-3 border-r-2 py-6 px-4", isPlace1 ? "border-brand-blue" : "border-brand-red")}>
           <span className={cn('text-3xl md:text-4xl font-extrabold', accentText)}>
             {reg.shift?.date && format(new Date(reg.shift.date), 'dd/MM/yyyy')}
           </span>
@@ -69,7 +68,7 @@ function ShiftCard({
             {formatShiftTimeRange(reg)}
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-1 items-center justify-center gap-2">
           <Badge variant={reg.isConfirmed ? 'success' : 'warning'}>
             {reg.isConfirmed ? 'Đã xác nhận' : 'Chờ xác nhận'}
           </Badge>
@@ -248,7 +247,7 @@ function RequestDialog({ shiftId, shiftName, onClose }: { shiftId: number; shift
               </div>
             )}
 
-<div className="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="note">Ghi chú</Label>
               <Textarea
                 id="note"
@@ -301,17 +300,15 @@ export default function MyShiftsPage() {
       <div className="flex gap-2 border-b">
         <button
           onClick={() => setTab('upcoming')}
-          className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
-            tab === 'upcoming' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
+          className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${tab === 'upcoming' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
         >
           Sắp tới ({upcoming.length})
         </button>
         <button
           onClick={() => setTab('past')}
-          className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
-            tab === 'past' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
+          className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${tab === 'past' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
         >
           Đã qua ({past.length})
         </button>

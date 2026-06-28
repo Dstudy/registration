@@ -119,18 +119,18 @@ function DayPanel({
   const dateLabel = `${weekdayName[date.getUTCDay()]}, Ngày ${pad(date.getUTCDate())}/${pad(date.getUTCMonth() + 1)}/${date.getUTCFullYear()}`;
 
   return (
-    <div className="w-full h-4/5 flex flex-col gap-3 rounded-tr-[2rem] bg-blue-50 border border-blue-100 p-4 shadow-xl">
+    <div className="w-full flex flex-col gap-3 rounded-tr-[2rem] bg-blue-50 border border-blue-100 p-4 shadow-xl">
       <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3">
         {groups.map((group) => (
           <div key={group[0].position} className="flex-1 flex flex-col gap-2">
             <p className="text-base font-semibold leading-snug shrink-0">
               <span className="text-blue-700">{dateLabel}</span>
               {" | "}
-              <span className="text-orange-600">
+              <span className="text-brand-red">
                 {locationLabel[group[0].position]}
               </span>
             </p>
-            <div className="flex-1 flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 h-12">
               {group.map((shift) => {
                 const isFull = shift.registrationCount >= shift.maxSlots;
                 const checked = selected.includes(shift.id);
@@ -145,7 +145,7 @@ function DayPanel({
                     className={cn(
                       "flex-1 flex items-center justify-between gap-2 rounded-tr-xl px-4 py-2.5 text-sm font-bold tracking-wide",
                       shift.isUserRegistered
-                        ? "bg-orange-500 text-white"
+                        ? "bg-brand-red text-white"
                         : isFull || !shift.isActive
                           ? "bg-gray-900 text-white"
                           : "bg-blue-600 text-white",
@@ -189,7 +189,7 @@ function DayPanel({
           type="button"
           onClick={() => onConfirm(selected)}
           disabled={!selected.length || isMutating}
-          className="w-full rounded-tr-full bg-orange-500 py-3 text-sm font-bold tracking-wide text-white hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="w-full h-14 rounded-full bg-brand-red py-3 text-sm font-light tracking-wide text-white hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {isMutating ? (
             <Loader2 className="mx-auto h-4 w-4 animate-spin" />
@@ -230,11 +230,11 @@ function DayCell({
       onMouseLeave={onLeave}
       onClick={() => hasShifts && onToggleLock(day)}
       className={cn(
-        "w-full aspect-square rounded-tr-xl md:rounded-tr-2xl flex items-center justify-center text-sm md:text-base font-bold",
+        "w-full aspect-square rounded-tr-xl md:rounded-tr-2xl flex items-center justify-center text-sm md:text-base font-bold ring-2 ring-transparent transition-all hover:scale-110",
         dayStatusClass[status],
         hasShifts ? "cursor-pointer" : "cursor-default",
         (isHovered || isLocked) &&
-          "ring-2 ring-blue-300 ring-offset-2 ring-offset-gray-50",
+        "ring-blue-300 ring-offset-1",
         isLocked && "ring-orange-400",
       )}
     >
@@ -341,6 +341,7 @@ export function ShiftCalendar({
     hoverTimer.current = setTimeout(() => setHoveredDay(null), 150);
   };
   const toggleLock = (day: number) => {
+    console.log('-----toggleLock - day :>> ', day);
     setLockedDay((prev) => (prev === day ? null : day));
   };
 
@@ -398,7 +399,7 @@ export function ShiftCalendar({
   return (
     <div className="h-full rounded-3xl bg-gray-50 p-4 md:p-6 flex items-center gap-3 md:gap-6">
       <div className="hidden md:flex items-center justify-center shrink-0">
-        <span className="text-xl lg:text-2xl font-bold text-blue-600 [writing-mode:vertical-rl] rotate-180 whitespace-nowrap">
+        <span className="text-xl lg:text-3xl font-normal text-blue-600 [writing-mode:vertical-rl] rotate-180 whitespace-nowrap">
           Tháng {m}|{year}
         </span>
       </div>
@@ -415,7 +416,7 @@ export function ShiftCalendar({
           ))}
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="grid grid-cols-6 gap-2 w-full">
+          <div className="grid grid-cols-6 gap-2 w-full p-2">
             {Array.from({ length: leadingEmpty }).map((_, i) => (
               <div key={`empty-${i}`} className="aspect-square" />
             ))}
