@@ -130,7 +130,7 @@ function DayPanel({
                 {locationLabel[group[0].position]}
               </span>
             </p>
-            <div className="flex flex-col gap-1.5 h-12">
+            <div className="flex flex-col gap-1.5 h-22">
               {group.map((shift) => {
                 const isFull = shift.registrationCount >= shift.maxSlots;
                 const checked = selected.includes(shift.id);
@@ -233,8 +233,7 @@ function DayCell({
         "w-full aspect-square rounded-tr-xl md:rounded-tr-2xl flex items-center justify-center text-sm md:text-base font-bold ring-2 ring-transparent transition-all hover:scale-110",
         dayStatusClass[status],
         hasShifts ? "cursor-pointer" : "cursor-default",
-        (isHovered || isLocked) &&
-        "ring-blue-300 ring-offset-1",
+        (isHovered || isLocked) && "ring-blue-300 ring-offset-1",
         isLocked && "ring-orange-400",
       )}
     >
@@ -341,7 +340,7 @@ export function ShiftCalendar({
     hoverTimer.current = setTimeout(() => setHoveredDay(null), 150);
   };
   const toggleLock = (day: number) => {
-    console.log('-----toggleLock - day :>> ', day);
+    console.log("-----toggleLock - day :>> ", day);
     setLockedDay((prev) => (prev === day ? null : day));
   };
 
