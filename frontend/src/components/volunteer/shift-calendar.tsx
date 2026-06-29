@@ -62,8 +62,8 @@ function getDayStatus(shifts: ShiftInstance[]): DayStatus {
 }
 
 const dayStatusClass: Record<DayStatus, string> = {
-  selected: "bg-orange-500 text-white",
-  available: "bg-blue-600 text-white",
+  selected: "bg-brand-red text-white",
+  available: "bg-brand-blue text-white",
   full: "bg-gray-900 text-white",
   empty: "bg-gray-200 text-gray-400",
 };
@@ -119,7 +119,7 @@ function DayPanel({
   const dateLabel = `${weekdayName[date.getUTCDay()]}, Ngày ${pad(date.getUTCDate())}/${pad(date.getUTCMonth() + 1)}/${date.getUTCFullYear()}`;
 
   return (
-    <div className="w-full flex flex-col gap-3 rounded-tr-[2rem] bg-blue-50 border border-blue-100 p-4 shadow-xl">
+    <div className="w-full flex flex-col gap-3 rounded-tr-[2rem] bg-[#e2eef9] border border-gray-400 p-6 shadow-xl">
       <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3">
         {groups.map((group) => (
           <div key={group[0].position} className="flex-1 flex flex-col gap-2">
@@ -184,7 +184,7 @@ function DayPanel({
         ))}
       </div>
 
-      <div className="border-t border-blue-200 pt-3 shrink-0">
+      <div className="border-t border-gray-400 pt-3 shrink-0">
         <button
           type="button"
           onClick={() => onConfirm(selected)}
@@ -397,7 +397,7 @@ export function ShiftCalendar({
   const displayedShifts = displayedDay ? shiftsByDay[displayedDay] || [] : [];
 
   return (
-    <div className="h-full rounded-3xl bg-gray-50 p-4 md:p-6 flex items-center gap-3 md:gap-6">
+    <div className="h-full rounded-3xl p-4 md:p-6 flex items-center gap-3 md:gap-6">
       <div className="hidden md:flex items-center justify-center shrink-0">
         <span className="text-xl lg:text-3xl font-normal text-blue-600 [writing-mode:vertical-rl] rotate-180 whitespace-nowrap">
           Tháng {m}|{year}
@@ -438,15 +438,15 @@ export function ShiftCalendar({
         <div className="flex flex-wrap items-center gap-4 mt-4 text-xs text-gray-500 shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-gray-900" />
-            <span>Đã kín</span>
+            <span className="text-gray-900">Đã kín</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-blue-600" />
-            <span>Vẫn còn chỗ</span>
+            <div className="w-4 h-4 rounded bg-brand-blue" />
+            <span className="text-brand-blue">Vẫn còn chỗ</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-orange-500" />
-            <span>Ca đã chọn</span>
+            <div className="w-4 h-4 rounded bg-brand-red" />
+            <span className="text-brand-red">Ca đã chọn</span>
           </div>
         </div>
       </div>

@@ -46,14 +46,14 @@ function ShiftCard({
   const accentText = isPlace1 ? 'text-brand-blue' : 'text-brand-red';
 
   return (
-    <div className={cn("rounded-bl-2xl rounded-br-3xl overflow-hidden border-2 shadow-sm", isPlace1 ? "border-brand-blue" : "border-brand-red")}>
+    <div className={cn("rounded-bl-[50px] rounded-br-[50px] overflow-hidden border-2 shadow-sm", isPlace1 ? "border-brand-blue" : "border-brand-red")}>
       <div className={cn('relative flex items-center justify-center py-4 text-white', accent)}>
         <span className="text-base md:text-lg font-bold tracking-wide flex items-center gap-2">
           THƯ VIỆN DƯƠNG LIỄU {isPlace1 ? 'CƠ SỞ 1' : 'CƠ SỞ 2'}
         </span>
         <button
           type="button"
-          className="flex items-center gap-1 text-sm md:text-base font-medium hover:opacity-80 transition-opacity absolute right-5"
+          className="flex items-center gap-1 text-xs md:text-sm font-medium hover:opacity-80 transition-opacity absolute right-5"
         >
           <Bell className="h-4 w-4" />
           Nhắc tôi!
@@ -61,10 +61,10 @@ function ShiftCard({
       </div>
       <div className="bg-white flex flex-wrap items-center justify-between">
         <div className={cn("flex flex-1 flex-wrap items-center justify-center gap-x-10 gap-y-3 border-r-2 py-6 px-4", isPlace1 ? "border-brand-blue" : "border-brand-red")}>
-          <span className={cn('text-3xl md:text-4xl font-extrabold', accentText)}>
+          <span className={cn('text-3xl md:text-4xl font-normal', accentText)}>
             {reg.shift?.date && format(new Date(reg.shift.date), 'dd/MM/yyyy')}
           </span>
-          <span className="text-3xl md:text-4xl font-extrabold text-gray-800">
+          <span className="text-3xl md:text-4xl font-light text-gray-800">
             {formatShiftTimeRange(reg)}
           </span>
         </div>
@@ -295,7 +295,7 @@ export default function MyShiftsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900">Ca của tôi</h1>
+      <h1 className="text-2xl font-bold text-brand-blue">Ca trông của tôi</h1>
 
       <div className="flex gap-2 border-b">
         <button

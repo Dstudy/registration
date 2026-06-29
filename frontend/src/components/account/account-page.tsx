@@ -68,7 +68,7 @@ export function AccountPage() {
   };
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-2xl space-y-6 mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-brand-blue">Tài khoản của tôi</h1>
         <p className="text-gray-500 mt-1">{profile?.fullname || user?.ma_tnv}</p>
