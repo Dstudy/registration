@@ -63,88 +63,81 @@ function ResetPasswordForm() {
     }
   };
 
+  if (!token) {
+    return (
+      <div className="w-full space-y-5 text-left">
+        <p className="text-sm text-destructive text-center">
+          Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.
+        </p>
+        <Link
+          href="/forgot-password"
+          className="block w-full text-center rounded-full bg-brand-blue py-3 text-sm font-bold tracking-wide text-white hover:bg-brand-blue-dark transition-colors"
+        >
+          YÊU CẦU LIÊN KẾT MỚI
+        </Link>
+      </div>
+    );
+  }
+
+  if (done) {
+    return (
+      <p className="text-sm text-gray-600 text-center">
+        Đặt lại mật khẩu thành công. Đang chuyển đến trang đăng nhập...
+      </p>
+    );
+  }
+
   return (
-    <div className="relative w-full max-w-md rounded-[2rem] rounded-tr-[5rem] bg-white border border-brand-blue/30 shadow-xl px-8 py-10">
-      <div className="flex flex-col items-center text-center gap-6">
-        <Logo />
-
-        <div>
-          <h1 className="text-xl font-extrabold text-brand-blue leading-snug">
-            Đặt lại mật khẩu
-          </h1>
-          <p className="text-sm text-gray-500 mt-2">Nhập mật khẩu mới cho tài khoản của bạn</p>
-        </div>
-
-        {!token ? (
-          <div className="w-full space-y-5 text-left">
-            <p className="text-sm text-destructive">
-              Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.
-            </p>
-            <Link
-              href="/forgot-password"
-              className="block w-full text-center rounded-full bg-brand-blue py-3 text-sm font-bold tracking-wide text-white hover:bg-brand-blue-dark transition-colors"
-            >
-              YÊU CẦU LIÊN KẾT MỚI
-            </Link>
-          </div>
-        ) : done ? (
-          <p className="text-sm text-gray-600">
-            Đặt lại mật khẩu thành công. Đang chuyển đến trang đăng nhập...
-          </p>
-        ) : (
-          <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-5 text-left">
-            <div className="space-y-1">
-              <label htmlFor="newPassword" className="text-sm text-gray-600">
-                Mật khẩu mới
-              </label>
-              <input
-                id="newPassword"
-                type="password"
-                placeholder="Nhập mật khẩu mới"
-                autoComplete="new-password"
-                className="w-full border-0 border-b border-gray-300 focus:border-brand-blue focus:ring-0 px-0 py-1.5 text-sm outline-none transition-colors"
-                {...register('newPassword')}
-              />
-              {errors.newPassword && (
-                <p className="text-xs text-destructive">{errors.newPassword.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label htmlFor="confirmPassword" className="text-sm text-gray-600">
-                Xác nhận mật khẩu
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                placeholder="Nhập lại mật khẩu mới"
-                autoComplete="new-password"
-                className="w-full border-0 border-b border-gray-300 focus:border-brand-blue focus:ring-0 px-0 py-1.5 text-sm outline-none transition-colors"
-                {...register('confirmPassword')}
-              />
-              {errors.confirmPassword && (
-                <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full rounded-full bg-brand-blue py-3 text-sm font-bold tracking-wide text-white hover:bg-brand-blue-dark transition-colors disabled:opacity-60 flex items-center justify-center"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ĐANG XỬ LÝ...
-                </>
-              ) : (
-                'ĐẶT LẠI MẬT KHẨU'
-              )}
-            </button>
-          </form>
+    <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-5 text-left">
+      <div className="space-y-1">
+        <label htmlFor="newPassword" className="text-sm text-gray-600">
+          Mật khẩu mới
+        </label>
+        <input
+          id="newPassword"
+          type="password"
+          placeholder="Nhập mật khẩu mới"
+          autoComplete="new-password"
+          className="w-full border-0 border-b border-gray-300 focus:border-brand-blue focus:ring-0 px-0 py-1.5 text-sm outline-none transition-colors"
+          {...register('newPassword')}
+        />
+        {errors.newPassword && (
+          <p className="text-xs text-destructive">{errors.newPassword.message}</p>
         )}
       </div>
-    </div>
+
+      <div className="space-y-1">
+        <label htmlFor="confirmPassword" className="text-sm text-gray-600">
+          Xác nhận mật khẩu
+        </label>
+        <input
+          id="confirmPassword"
+          type="password"
+          placeholder="Nhập lại mật khẩu mới"
+          autoComplete="new-password"
+          className="w-full border-0 border-b border-gray-300 focus:border-brand-blue focus:ring-0 px-0 py-1.5 text-sm outline-none transition-colors"
+          {...register('confirmPassword')}
+        />
+        {errors.confirmPassword && (
+          <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
+        )}
+      </div>
+
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="w-full rounded-full bg-brand-blue py-3 text-sm font-bold tracking-wide text-white hover:bg-brand-blue-dark transition-colors disabled:opacity-60 flex items-center justify-center"
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ĐANG XỬ LÝ...
+          </>
+        ) : (
+          'ĐẶT LẠI MẬT KHẨU'
+        )}
+      </button>
+    </form>
   );
 }
 
@@ -170,9 +163,28 @@ export default function ResetPasswordPage() {
         className="pointer-events-none absolute -bottom-10 -right-24 w-[520px] opacity-70"
       />
 
-      <Suspense fallback={null}>
-        <ResetPasswordForm />
-      </Suspense>
+      <div className="relative w-full max-w-md rounded-[2rem] rounded-tr-[5rem] bg-white border border-brand-blue/30 shadow-xl px-8 py-10">
+        <div className="flex flex-col items-center text-center gap-6">
+          <Logo />
+
+          <div>
+            <h1 className="text-xl font-extrabold text-brand-blue leading-snug">
+              Đặt lại mật khẩu
+            </h1>
+            <p className="text-sm text-gray-500 mt-2">Nhập mật khẩu mới cho tài khoản của bạn</p>
+          </div>
+
+          <Suspense
+            fallback={
+              <div className="flex justify-center p-4">
+                <Loader2 className="h-6 w-6 animate-spin text-brand-blue" />
+              </div>
+            }
+          >
+            <ResetPasswordForm />
+          </Suspense>
+        </div>
+      </div>
     </div>
   );
 }
