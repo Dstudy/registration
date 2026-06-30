@@ -9,6 +9,8 @@ CMD ["npm", "run", "dev"]
 
 # Builder stage
 FROM node:20-alpine AS builder
+ARG BACKEND_URL=http://localhost:3001
+ENV BACKEND_URL=$BACKEND_URL
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY package*.json ./

@@ -72,6 +72,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: production
+      args:
+        - BACKEND_URL=http://backend:3001
     container_name: vms_frontend
     env_file: .env
     environment:
