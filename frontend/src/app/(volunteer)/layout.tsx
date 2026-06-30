@@ -7,6 +7,8 @@ import { useAuthStore } from '@/stores/auth.store';
 import { VolunteerTopNav } from '@/components/layout/volunteer-nav';
 import { NotificationBell } from '@/components/layout/notification-bell';
 import { Logo } from '@/components/brand/logo';
+import clsx from 'clsx';
+import styles from './layout.module.css';
 
 export default function VolunteerLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, hasHydrated, logout } = useAuthStore();
@@ -28,9 +30,9 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
   if (!isAuthenticated || !user) return null;
 
   return (
-    <div className="min-h-screen bg-brand-bg flex flex-col">
+    <div className={clsx(styles.background, "min-h-screen bg-brand-bg flex flex-col")}>
       <header
-        className={`bg-brand-bg px-4 md:px-6 pt-8 pb-5 flex items-center gap-3 md:gap-6 sticky top-0 z-30 ${
+        className={`px-4 md:px-6 pt-8 pb-5 flex items-center gap-3 md:gap-6 sticky top-0 z-30 ${
           isDashboard ? 'hidden' : ''
         }`}
       >
@@ -38,8 +40,6 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
           <Logo className="hidden sm:flex" />
           <Logo className="sm:hidden [&>span]:hidden" />
         </Link>
-
-        <VolunteerTopNav />
 
         <div className="flex items-center gap-3 ml-auto shrink-0">
           <NotificationBell />
@@ -64,8 +64,12 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
         </div>
       </header>
 
+      {!isDashboard && <VolunteerTopNav />}
+
       {/* Page content */}
-      <main className="flex-1 p-4 md:p-6">{children}</main>
+      <main className={clsx("flex-1", {
+        'p-4 md:p-6': !isDashboard,
+      })}>{children}</main>
     </div>
   );
 }
