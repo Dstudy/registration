@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND = process.env.BACKEND_URL ?? 'http://localhost:3001';
-
 function applyBackendCookies(backendRes: Response, response: NextResponse) {
   const raw: string[] =
     typeof (backendRes.headers as any).getSetCookie === 'function'
@@ -33,6 +31,7 @@ function applyBackendCookies(backendRes: Response, response: NextResponse) {
 }
 
 export async function POST(request: NextRequest) {
+  const BACKEND = process.env.BACKEND_URL ?? 'http://localhost:3001';
   let body: unknown;
   try {
     body = await request.json();

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND = process.env.BACKEND_URL || 'http://localhost:3001';
-
 export async function POST(request: NextRequest) {
+  const BACKEND = process.env.BACKEND_URL || 'http://localhost:3001';
   const accessToken = request.cookies.get('access_token')?.value;
 
   await fetch(`${BACKEND}/api/auth/logout`, {
