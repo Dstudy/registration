@@ -16,7 +16,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            cd /opt/registration
+            cd registration
             git fetch origin
             git checkout production
             git pull
