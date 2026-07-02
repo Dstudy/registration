@@ -32,15 +32,11 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
   return (
     <div className={clsx(styles.background, "min-h-screen bg-brand-bg flex flex-col")}>
       <header
-        className={`px-4 md:px-6 pt-8 pb-5 flex items-center gap-3 md:gap-6 sticky top-0 z-30 ${
-          isDashboard ? 'hidden' : ''
-        }`}
+        className="px-8 sm:px-12 lg:px-16 pt-5 sm:pt-10 lg:pt-14 pb-5 flex items-center gap-3 md:gap-6 sticky top-0 z-30"
       >
         <Link href="/dashboard" className="shrink-0">
-          <Logo className="hidden sm:flex" />
-          <Logo className="sm:hidden [&>span]:hidden" />
+          <Logo />
         </Link>
-
         <div className="flex items-center gap-3 ml-auto shrink-0">
           <NotificationBell />
           <div className="flex items-center gap-2">

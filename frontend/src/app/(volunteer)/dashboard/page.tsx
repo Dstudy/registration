@@ -13,8 +13,6 @@ import {
   ArrowLeftRight,
 } from "lucide-react";
 import { differenceInDays } from "date-fns";
-import { Logo } from "@/components/brand/logo";
-import { NotificationBell } from "@/components/layout/notification-bell";
 import EllipseRings from "@/components/ui/ellipse-rings";
 
 export default function DashboardPage() {
@@ -64,35 +62,16 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className="relative overflow-hidden rounded-3xl p-10 md:p-16" >
-        <div className="relative flex items-center justify-between">
-          <Logo />
-          <div className="flex items-center gap-3">
-            <NotificationBell />
-            <Link
-              href="/account"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600 hover:opacity-80 transition-opacity"
-            >
-              {(user?.fullname || user?.ma_tnv || "")
-                .split(" ")
-                .map((w) => w[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()}
-            </Link>
-          </div>
-        </div>
-        <div className="flex gap-3 mt-10 md:mt-10">
-          <EllipseRings size={60} />
-          <div className="pt-3">
-            <h1 className="text-3xl md:text-5xl font-normal text-brand-blue">
-              Xin chào {user?.fullname || user?.ma_tnv}!
-            </h1>
-            <p className="mt-3 text-brand-blue font-normal">
-              Tháng này bạn đang có: {String(monthShiftCount).padStart(2, "0")}{" "}
-              lịch trông
-            </p>
-          </div>
+      <div className="flex gap-3 mt-10 px-10 md:px-16">
+        <EllipseRings size={60} />
+        <div className="pt-3">
+          <h1 className="text-3xl md:text-5xl font-normal text-brand-blue">
+            Xin chào {user?.fullname || user?.ma_tnv}!
+          </h1>
+          <p className="mt-3 text-brand-blue font-normal">
+            Tháng này bạn đang có: {String(monthShiftCount).padStart(2, "0")}{" "}
+            lịch trông
+          </p>
         </div>
       </div>
 
