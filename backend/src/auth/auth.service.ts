@@ -112,7 +112,7 @@ export class AuthService {
     return { message: 'Đặt lại mật khẩu thành công' };
   }
 
-  private async issueTokens(user: { id: number; ma_tnv: string; role: string }) {
+  private async issueTokens(user: { id: number; ma_tnv: string; role: string; fullname: string }) {
     const payload: JwtPayload = {
       sub: user.id,
       ma_tnv: user.ma_tnv,
@@ -141,6 +141,7 @@ export class AuthService {
         id: user.id,
         ma_tnv: user.ma_tnv,
         role: user.role,
+        fullname: user.fullname,
       },
     };
   }

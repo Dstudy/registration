@@ -10,7 +10,6 @@ import { useAuthStore } from '@/stores/auth.store';
 import { toast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/brand/logo';
-import { ArchRow } from '@/components/brand/arches';
 import { clsx } from 'clsx';
 import styles from './index.module.css';
 

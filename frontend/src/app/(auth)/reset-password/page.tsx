@@ -10,7 +10,8 @@ import api from '@/lib/api';
 import { toast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/brand/logo';
-import { ArchRow } from '@/components/brand/arches';
+import styles from './index.module.css';
+import clsx from 'clsx';
 
 const resetPasswordSchema = z
   .object({
@@ -71,7 +72,7 @@ function ResetPasswordForm() {
         </p>
         <Link
           href="/forgot-password"
-          className="block w-full text-center rounded-full bg-brand-blue py-3 text-sm font-bold tracking-wide text-white hover:bg-brand-blue-dark transition-colors"
+          className="block w-80 mx-auto text-center rounded-full bg-brand-blue py-3 text-sm font-bold tracking-wide text-white hover:bg-brand-blue-dark transition-colors"
         >
           YÊU CẦU LIÊN KẾT MỚI
         </Link>
@@ -126,7 +127,7 @@ function ResetPasswordForm() {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full rounded-full bg-brand-blue py-3 text-sm font-bold tracking-wide text-white hover:bg-brand-blue-dark transition-colors disabled:opacity-60 flex items-center justify-center"
+        className="w-80 mx-auto rounded-full bg-brand-blue py-3 text-sm font-bold tracking-wide text-white hover:bg-brand-blue-dark transition-colors disabled:opacity-60 flex items-center justify-center"
       >
         {isLoading ? (
           <>
@@ -143,35 +144,16 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="relative min-h-screen overflow-hidden flex items-center justify-center bg-brand-bg p-4">
-      <ArchRow
-        color="#C7D2FE"
-        count={4}
-        radius={110}
-        className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 w-[640px] opacity-70"
-      />
-      <ArchRow
-        color="#FBE2C8"
-        count={3}
-        radius={140}
-        className="pointer-events-none absolute -bottom-10 -left-24 w-[520px] opacity-70"
-      />
-      <ArchRow
-        color="#C7D2FE"
-        count={3}
-        radius={140}
-        className="pointer-events-none absolute -bottom-10 -right-24 w-[520px] opacity-70"
-      />
-
-      <div className="relative w-full max-w-md rounded-[2rem] rounded-tr-[5rem] bg-white border border-brand-blue/30 shadow-xl px-8 py-10">
+    <div className={clsx(styles.background, "relative min-h-screen overflow-hidden flex items-center justify-center bg-brand-blue p-4")}>
+      <div className="relative w-full max-w-3xl rounded-tr-[5rem] bg-white shadow-xl px-8 py-10">
         <div className="flex flex-col items-center text-center gap-6">
           <Logo />
 
-          <div>
-            <h1 className="text-xl font-extrabold text-brand-blue leading-snug">
+          <div className='mt-5'>
+            <h1 className="text-4xl font-semibold text-brand-blue leading-snug">
               Đặt lại mật khẩu
             </h1>
-            <p className="text-sm text-gray-500 mt-2">Nhập mật khẩu mới cho tài khoản của bạn</p>
+            <p className="text-xs text-gray-500">Nhập mật khẩu mới cho tài khoản của bạn</p>
           </div>
 
           <Suspense

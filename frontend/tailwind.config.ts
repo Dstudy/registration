@@ -50,7 +50,7 @@ const config: Config = {
           foreground: 'hsl(var(--card-foreground))',
         },
         brand: {
-          blue: '#4F5FE8',
+          blue: '#4164fd',
           'blue-dark': '#3D4ED1',
           'blue-light': '#8EC5F7',
           orange: '#F5A623',
