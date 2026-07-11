@@ -59,3 +59,8 @@ desktop.ini
 
 # Misc
 *.tgz
+
+.docx
+ADMIN_MANUAL.docx
+ADMIN_MANUAL.md
+generate_docx.py

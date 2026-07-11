@@ -2,9 +2,8 @@ import {
   PrismaClient,
   Role,
   UserStatus,
-  ShiftPosition,
   RegistrationType,
-  AttendanceStatus,
+  ShiftPosition,
   NotificationType,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -166,7 +165,7 @@ async function main() {
 
   // ── Shift Instances ───────────────────
 
-  // Current month: published (past shifts available for attendance seeding)
+  // Current month: published (past shifts generated)
   await generateShiftsForMonth(currentYear, currentMonth, true);
   console.log(`✅ Shifts generated: ${currentYear}-${currentMonth} (published)`);
 
@@ -176,7 +175,7 @@ async function main() {
 
   // ── Registrations for current month ──
 
-  // Get a few past shifts from current month to create registrations/attendance
+  // Get a few past shifts from current month to create registrations
   const pastDate = new Date(now);
   pastDate.setUTCDate(Math.max(1, now.getUTCDate() - 7)); // 7 days ago
 
@@ -245,35 +244,6 @@ async function main() {
 
   console.log(`✅ Registrations seeded: ${registrationCount}`);
 
-  // ── Attendance for past shifts ────────
-
-  let attendanceCount = 0;
-  const pastRegistrations = await prisma.registration.findMany({
-    where: { shift: { date: { lt: now } } },
-    include: { shift: true },
-  });
-
-  const statuses = [AttendanceStatus.PRESENT, AttendanceStatus.PRESENT, AttendanceStatus.LATE, AttendanceStatus.ABSENT];
-
-  for (let i = 0; i < pastRegistrations.length; i++) {
-    const reg = pastRegistrations[i];
-    const status = statuses[i % statuses.length];
-
-    await prisma.attendance.upsert({
-      where: { userId_shiftId: { userId: reg.userId, shiftId: reg.shiftId } },
-      update: {},
-      create: {
-        userId: reg.userId,
-        shiftId: reg.shiftId,
-        status,
-        note: status === AttendanceStatus.LATE ? 'Đến muộn 15 phút' : null,
-        updatedBy: reg.userId,
-      },
-    });
-    attendanceCount++;
-  }
-
-  console.log(`✅ Attendance seeded: ${attendanceCount}`);
 
   // ── Notifications ─────────────────────
 

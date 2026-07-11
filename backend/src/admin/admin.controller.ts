@@ -59,10 +59,7 @@ export class AdminController {
     res.send(buf);
   }
 
-  @Get('attendance')
-  getAttendanceByDate(@Query('date') date: string) {
-    return this.adminService.getAttendanceByDate(date);
-  }
+
 
   @Get('volunteers')
   getVolunteers(@Query('search') search?: string) {

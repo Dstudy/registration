@@ -15,13 +15,6 @@ import api from '@/lib/api';
 import { ArrowLeftRight, Bell, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const ATTENDANCE_LABEL: Record<string, { label: string; variant: any }> = {
-  PRESENT: { label: 'Có mặt', variant: 'success' },
-  LATE: { label: 'Đi muộn', variant: 'warning' },
-  ABSENT: { label: 'Vắng', variant: 'danger' },
-  FORGOT: { label: 'Quên', variant: 'warning' },
-  UNCONFIRMED: { label: 'Chưa xác nhận', variant: 'secondary' },
-};
 
 // Format start/end time without timezone shift, matching the calendar's display.
 function formatShiftTimeRange(reg: any) {
@@ -34,11 +27,9 @@ function formatShiftTimeRange(reg: any) {
 
 function ShiftCard({
   reg,
-  showAttendance,
   onRequest,
 }: {
   reg: any;
-  showAttendance?: boolean;
   onRequest?: () => void;
 }) {
   const isPlace1 = reg.shift?.position === 'PLACE_1';
@@ -72,11 +63,7 @@ function ShiftCard({
           <Badge variant={reg.isConfirmed ? 'success' : 'warning'}>
             {reg.isConfirmed ? 'Đã xác nhận' : 'Chờ xác nhận'}
           </Badge>
-          {showAttendance && reg.attendance && (
-            <Badge variant={ATTENDANCE_LABEL[reg.attendance.status]?.variant}>
-              {ATTENDANCE_LABEL[reg.attendance.status]?.label}
-            </Badge>
-          )}
+
           {onRequest && (
             <Button size="sm" variant="outline" onClick={onRequest}>
               <ArrowLeftRight className="h-3 w-3 mr-1" />
@@ -322,7 +309,6 @@ export default function MyShiftsPage() {
             <ShiftCard
               key={reg.id}
               reg={reg}
-              showAttendance={tab === 'past'}
               onRequest={tab === 'upcoming' ? () => setRequestingReg(reg) : undefined}
             />
           ))}
