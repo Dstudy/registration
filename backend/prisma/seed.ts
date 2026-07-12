@@ -2,9 +2,8 @@ import {
   PrismaClient,
   Role,
   UserStatus,
-  ShiftPosition,
   RegistrationType,
-  AttendanceStatus,
+  ShiftPosition,
   NotificationType,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -39,14 +38,26 @@ interface ShiftTemplate {
   endMin: number;
 }
 
-const WEEKDAY_SHIFTS: ShiftTemplate[] = [
-  { shiftName: 'Ca Sáng', startHour: 8, startMin: 0, endHour: 12, endMin: 0 },
-];
+const SHIFT_TIMES: Record<string, ShiftTemplate> = {
+  'Ca Sáng':  { shiftName: 'Ca Sáng',  startHour: 8,  startMin: 0,  endHour: 12, endMin: 0  },
+  'Ca Chiều': { shiftName: 'Ca Chiều', startHour: 14, startMin: 0,  endHour: 17, endMin: 0  },
+  'Ca Tối':   { shiftName: 'Ca Tối',   startHour: 19, startMin: 45, endHour: 21, endMin: 30 },
+};
 
-const WEEKEND_SHIFTS: ShiftTemplate[] = [
-  { shiftName: 'Ca Sáng', startHour: 8, startMin: 0, endHour: 12, endMin: 0 },
-  { shiftName: 'Ca Chiều', startHour: 13, startMin: 30, endHour: 17, endMin: 30 },
-];
+// DOW: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+const POSITION_SCHEDULE: Record<ShiftPosition, Record<number, string[]>> = {
+  [ShiftPosition.PLACE_1]: {
+    2: ['Ca Tối'],              // Tuesday
+    4: ['Ca Tối'],              // Thursday
+    6: ['Ca Tối', 'Ca Chiều'], // Saturday
+    0: ['Ca Chiều', 'Ca Sáng'], // Sunday
+  },
+  [ShiftPosition.PLACE_2]: {
+    3: ['Ca Tối'],              // Wednesday
+    5: ['Ca Tối'],              // Friday
+    0: ['Ca Chiều', 'Ca Sáng'], // Sunday
+  },
+};
 
 const POSITIONS = [ShiftPosition.PLACE_1, ShiftPosition.PLACE_2];
 
@@ -56,10 +67,12 @@ async function generateShiftsForMonth(year: number, month: number, publish = fal
 
   for (let day = 1; day <= daysInMonth; day++) {
     const date = buildDate(year, month, day);
-    const templates = isWeekend(date) ? WEEKEND_SHIFTS : WEEKDAY_SHIFTS;
+    const dow = getDayOfWeek(date);
 
-    for (const tmpl of templates) {
-      for (const position of POSITIONS) {
+    for (const position of POSITIONS) {
+      const shiftNames = POSITION_SCHEDULE[position][dow] ?? [];
+      for (const shiftName of shiftNames) {
+        const tmpl = SHIFT_TIMES[shiftName];
         const shift = await prisma.shiftInstance.upsert({
           where: {
             date_shiftName_position: {
@@ -117,6 +130,12 @@ async function main() {
     },
   });
 
+  await prisma.systemConfig.upsert({
+    where: { key: 'shift_reminder_enabled' },
+    update: {},
+    create: { key: 'shift_reminder_enabled', value: 'true' },
+  });
+
   console.log('✅ SystemConfig seeded');
 
   // ── Users ─────────────────────────────
@@ -166,7 +185,7 @@ async function main() {
 
   // ── Shift Instances ───────────────────
 
-  // Current month: published (past shifts available for attendance seeding)
+  // Current month: published (past shifts generated)
   await generateShiftsForMonth(currentYear, currentMonth, true);
   console.log(`✅ Shifts generated: ${currentYear}-${currentMonth} (published)`);
 
@@ -176,7 +195,7 @@ async function main() {
 
   // ── Registrations for current month ──
 
-  // Get a few past shifts from current month to create registrations/attendance
+  // Get a few past shifts from current month to create registrations
   const pastDate = new Date(now);
   pastDate.setUTCDate(Math.max(1, now.getUTCDate() - 7)); // 7 days ago
 
@@ -245,35 +264,6 @@ async function main() {
 
   console.log(`✅ Registrations seeded: ${registrationCount}`);
 
-  // ── Attendance for past shifts ────────
-
-  let attendanceCount = 0;
-  const pastRegistrations = await prisma.registration.findMany({
-    where: { shift: { date: { lt: now } } },
-    include: { shift: true },
-  });
-
-  const statuses = [AttendanceStatus.PRESENT, AttendanceStatus.PRESENT, AttendanceStatus.LATE, AttendanceStatus.ABSENT];
-
-  for (let i = 0; i < pastRegistrations.length; i++) {
-    const reg = pastRegistrations[i];
-    const status = statuses[i % statuses.length];
-
-    await prisma.attendance.upsert({
-      where: { userId_shiftId: { userId: reg.userId, shiftId: reg.shiftId } },
-      update: {},
-      create: {
-        userId: reg.userId,
-        shiftId: reg.shiftId,
-        status,
-        note: status === AttendanceStatus.LATE ? 'Đến muộn 15 phút' : null,
-        updatedBy: reg.userId,
-      },
-    });
-    attendanceCount++;
-  }
-
-  console.log(`✅ Attendance seeded: ${attendanceCount}`);
 
   // ── Notifications ─────────────────────
 

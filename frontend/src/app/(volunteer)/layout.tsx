@@ -11,7 +11,7 @@ import clsx from 'clsx';
 import styles from './layout.module.css';
 
 export default function VolunteerLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, hasHydrated, logout } = useAuthStore();
+  const { user, isAuthenticated, hasHydrated, logout, viewAsVolunteer, setViewAsVolunteer } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
   const isDashboard = pathname === '/dashboard';
@@ -21,18 +21,38 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
 
     if (!isAuthenticated) {
       router.push('/login');
-    } else if (user?.role === 'ADMIN') {
+    } else if (user?.role === 'ADMIN' && !viewAsVolunteer) {
       router.push('/admin/dashboard');
     }
-  }, [hasHydrated, isAuthenticated, user, router]);
+  }, [hasHydrated, isAuthenticated, user, viewAsVolunteer, router]);
 
   if (!hasHydrated) return null;
   if (!isAuthenticated || !user) return null;
 
   return (
     <div className={clsx(styles.background, "min-h-screen bg-brand-bg flex flex-col")}>
+      {user.role === 'ADMIN' && viewAsVolunteer && (
+        <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-semibold px-6 py-2.5 flex items-center justify-between gap-4 shadow-md z-40 transition-all">
+          <div className="flex items-center gap-2">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+            </span>
+            <span>Bạn đang xem giao diện với tư cách Tình nguyện viên (Chế độ xem trước)</span>
+          </div>
+          <button
+            onClick={() => {
+              setViewAsVolunteer(false);
+              router.push('/admin/dashboard');
+            }}
+            className="bg-white text-amber-600 px-3 py-1 rounded-full font-bold shadow hover:bg-amber-50 active:scale-95 transition-all"
+          >
+            Quay lại trang Quản trị
+          </button>
+        </div>
+      )}
       <header
-        className="px-8 sm:px-12 lg:px-16 pt-5 sm:pt-10 lg:pt-14 pb-5 flex items-center gap-3 md:gap-6 sticky top-0 z-30"
+        className="px-8 sm:px-12 lg:px-16 pt-5 sm:pt-10 lg:pt-14 pb-5 flex items-center gap-3 md:gap-6"
       >
         <Link href="/dashboard" className="shrink-0">
           <Logo />

@@ -8,7 +8,6 @@ import {
   Calendar,
   Users,
   ArrowLeftRight,
-  ClipboardCheck,
   UserCog,
   FileSpreadsheet,
 } from "lucide-react";
@@ -18,7 +17,7 @@ const navItems = [
   { href: "/admin/shifts", icon: Calendar, label: "Lịch trực" },
   { href: "/admin/assignments", icon: Users, label: "Phân công" },
   { href: "/admin/requests", icon: ArrowLeftRight, label: "Yêu cầu" },
-  { href: "/admin/attendance", icon: ClipboardCheck, label: "Điểm danh" },
+
   { href: "/admin/volunteers", icon: UserCog, label: "Tình nguyện viên" },
   { href: "/admin/reports", icon: FileSpreadsheet, label: "Báo cáo" },
 ];

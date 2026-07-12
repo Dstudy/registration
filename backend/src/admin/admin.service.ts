@@ -27,12 +27,7 @@ export class AdminService {
     const startDate = new Date(Date.UTC(year, m - 1, 1));
     const endDate = new Date(Date.UTC(year, m, 0, 23, 59, 59));
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
-
-    const [totalVolunteers, activeVolunteers, shiftsThisMonth, totalRegistrationsThisMonth, pendingRequests, todayAttendanceStats] =
+    const [totalVolunteers, activeVolunteers, shiftsThisMonth, totalRegistrationsThisMonth, pendingRequests] =
       await Promise.all([
         this.prisma.user.count({ where: { role: Role.VOLUNTEER } }),
         this.prisma.user.count({ where: { role: Role.VOLUNTEER, status: UserStatus.ACTIVE } }),
@@ -41,17 +36,7 @@ export class AdminService {
           where: { shift: { date: { gte: startDate, lte: endDate } } },
         }),
         this.prisma.shiftRequest.count({ where: { status: 'ACCEPTED_BY_RECEIVER' } }),
-        this.prisma.attendance.groupBy({
-          by: ['status'],
-          _count: { status: true },
-          where: { shift: { date: { gte: todayStart, lte: todayEnd } } },
-        }),
       ]);
-
-    const todayMap = todayAttendanceStats.reduce(
-      (acc, cur) => ({ ...acc, [cur.status]: cur._count.status }),
-      {} as Record<string, number>,
-    );
 
     return {
       totalVolunteers,
@@ -59,11 +44,6 @@ export class AdminService {
       shiftsThisMonth,
       totalRegistrationsThisMonth,
       pendingRequests,
-      todayAttendance: {
-        present: (todayMap['PRESENT'] || 0) + (todayMap['LATE'] || 0),
-        absent: todayMap['ABSENT'] || 0,
-        unconfirmed: todayMap['UNCONFIRMED'] || 0,
-      },
     };
   }
 
@@ -193,27 +173,11 @@ export class AdminService {
     };
   }
 
-  async getAttendanceByDate(date: string) {
-    const d = new Date(date);
-    const next = new Date(date);
-    next.setDate(next.getDate() + 1);
 
-    const records = await this.prisma.attendance.findMany({
-      where: { shift: { date: { gte: d, lt: next } } },
-      include: {
-        user: { select: { id: true, ma_tnv: true, fullname: true } },
-        shift: { select: { id: true, shiftName: true, position: true, startTime: true, endTime: true } },
-      },
-      orderBy: { shift: { startTime: 'asc' } },
-    });
-
-    return { records, date };
-  }
 
   async getVolunteers(search?: string) {
     const volunteers = await this.prisma.user.findMany({
       where: {
-        role: Role.VOLUNTEER,
         ...(search
           ? {
               OR: [
@@ -266,14 +230,15 @@ export class AdminService {
     return { enabled };
   }
 
-  async updateVolunteer(id: number, body: { status?: string; min_shifts_per_month?: number }) {
+  async updateVolunteer(id: number, body: { status?: string; min_shifts_per_month?: number; role?: string }) {
     return this.prisma.user.update({
       where: { id },
       data: {
         ...(body.status ? { status: body.status as UserStatus } : {}),
         ...(body.min_shifts_per_month !== undefined ? { min_shifts_per_month: body.min_shifts_per_month } : {}),
+        ...(body.role ? { role: body.role as Role } : {}),
       },
-      select: { id: true, ma_tnv: true, fullname: true, status: true, min_shifts_per_month: true },
+      select: { id: true, ma_tnv: true, fullname: true, status: true, min_shifts_per_month: true, role: true },
     });
   }
 

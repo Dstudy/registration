@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSocket } from '@/providers/socket-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/use-toast';
 import api from '@/lib/api';
-import { Users, Calendar, CheckSquare, AlertTriangle, ToggleLeft, ToggleRight, Mail, Bell, BellOff } from 'lucide-react';
+import { Users, Calendar, AlertTriangle, ToggleLeft, ToggleRight, Mail, Bell, BellOff } from 'lucide-react';
 
 interface Stats {
   totalVolunteers: number;
@@ -15,7 +16,6 @@ interface Stats {
   shiftsThisMonth: number;
   totalRegistrationsThisMonth: number;
   pendingRequests: number;
-  todayAttendance: { present: number; absent: number; unconfirmed: number };
 }
 
 export default function AdminDashboardPage() {
@@ -60,10 +60,11 @@ export default function AdminDashboardPage() {
   });
 
   const currentMonth = new Date().toISOString().slice(0, 7);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
   const sendEmailsMutation = useMutation({
-    mutationFn: () =>
-      api.post('/admin/send-confirmation-emails', { month: currentMonth }).then((r) => r.data.data),
+    mutationFn: (month: string) =>
+      api.post('/admin/send-confirmation-emails', { month }).then((r) => r.data.data),
     onSuccess: (data: { sent: number; skipped: number; alreadySent: number; errors: number }) => {
       const parts: string[] = [];
       if (data.alreadySent > 0) parts.push(`${data.alreadySent} TNV đã nhận email trước đó`);
@@ -83,11 +84,9 @@ export default function AdminDashboardPage() {
     const refresh = () => queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
     socket.on('registration.created', refresh);
     socket.on('registration.canceled', refresh);
-    socket.on('attendance.updated', refresh);
     return () => {
       socket.off('registration.created', refresh);
       socket.off('registration.canceled', refresh);
-      socket.off('attendance.updated', refresh);
     };
   }, [socket, queryClient]);
 
@@ -100,7 +99,7 @@ export default function AdminDashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Tổng quan</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Card className="border-0 shadow-sm">
             <CardContent className="p-3 flex items-center gap-3">
               <span className="text-sm font-medium text-gray-700">Đăng ký ca trực</span>
@@ -138,20 +137,31 @@ export default function AdminDashboardPage() {
               </Button>
             </CardContent>
           </Card>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isOpen || sendEmailsMutation.isPending}
-            onClick={() => sendEmailsMutation.mutate()}
-            title={isOpen ? 'Đóng đăng ký trước khi gửi email' : 'Gửi email xác nhận ca trực tháng này'}
-          >
-            <Mail className="h-4 w-4 mr-1.5" />
-            {sendEmailsMutation.isPending ? 'Đang gửi...' : 'Gửi email xác nhận'}
-          </Button>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-3 flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-700">Email xác nhận</span>
+              <Input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="w-36 h-9"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isOpen || sendEmailsMutation.isPending}
+                onClick={() => sendEmailsMutation.mutate(selectedMonth)}
+                title={isOpen ? 'Đóng đăng ký trước khi gửi email' : `Gửi email xác nhận ca trực tháng ${selectedMonth}`}
+              >
+                <Mail className="h-4 w-4 mr-1.5" />
+                {sendEmailsMutation.isPending ? 'Đang gửi...' : 'Gửi'}
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
           icon={<Users className="h-5 w-5 text-blue-600" />}
           label="Tình nguyện viên"
@@ -165,13 +175,6 @@ export default function AdminDashboardPage() {
           value={stats?.shiftsThisMonth ?? '—'}
           sub={`${stats?.totalRegistrationsThisMonth ?? 0} đăng ký`}
           bg="bg-green-50"
-        />
-        <StatCard
-          icon={<CheckSquare className="h-5 w-5 text-purple-600" />}
-          label="Điểm danh hôm nay"
-          value={stats?.todayAttendance.present ?? '—'}
-          sub={`${stats?.todayAttendance.absent ?? 0} vắng • ${stats?.todayAttendance.unconfirmed ?? 0} chưa xác nhận`}
-          bg="bg-purple-50"
         />
         <StatCard
           icon={<AlertTriangle className="h-5 w-5 text-orange-600" />}

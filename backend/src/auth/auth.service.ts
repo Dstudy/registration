@@ -122,17 +122,15 @@ export class AuthService {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-        expiresIn: this.configService.get<string>('JWT_ACCESS_EXPIRES', '15m'),
       }),
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES', '7d'),
       }),
     ]);
 
-    // Store hashed refresh token (7d = 604800s)
+    // Store hashed refresh token without expiration (indefinite TTL)
     const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
-    await this.redis.setex(`refresh_token:${user.id}`, 604800, hashedRefreshToken);
+    await this.redis.set(`refresh_token:${user.id}`, hashedRefreshToken);
 
     return {
       accessToken,

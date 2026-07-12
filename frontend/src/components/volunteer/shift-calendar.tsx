@@ -75,6 +75,7 @@ interface DayPanelProps {
   onConfirm: (shiftIds: number[]) => void;
   onCancel: (shiftId: number) => void;
   isMutating: boolean;
+  registeredCount: number;
 }
 
 function DayPanel({
@@ -84,6 +85,7 @@ function DayPanel({
   onConfirm,
   onCancel,
   isMutating,
+  registeredCount,
 }: DayPanelProps) {
   const [selected, setSelected] = useState<number[]>([]);
 
@@ -109,6 +111,17 @@ function DayPanel({
       shift.isUserRegistered
     )
       return;
+
+    const isChecking = !selected.includes(shift.id);
+    if (isChecking && registeredCount + selected.length >= 5) {
+      toast({
+        title: "Giới hạn đăng ký",
+        description: "Bạn chỉ được đăng ký tối đa 5 ca trực trong một tháng.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSelected((prev) =>
       prev.includes(shift.id)
         ? prev.filter((id) => id !== shift.id)
@@ -138,7 +151,8 @@ function DayPanel({
                   isRegistrationOpen &&
                   shift.isActive &&
                   !isFull &&
-                  !shift.isUserRegistered;
+                  !shift.isUserRegistered &&
+                  (checked || registeredCount + selected.length < 5);
                 return (
                   <div
                     key={shift.id}
@@ -259,6 +273,10 @@ export function ShiftCalendar({
     queryKey: ["shifts", month],
     queryFn: () => api.get(`/shifts?month=${month}`).then((r) => r.data.data),
   });
+
+  const registeredCount = useMemo(() => {
+    return shifts.filter((s) => s.isUserRegistered).length;
+  }, [shifts]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -434,18 +452,23 @@ export function ShiftCalendar({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 mt-4 text-xs text-gray-500 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-gray-900" />
-            <span className="text-gray-900">Đã kín</span>
+        <div className="flex flex-wrap items-center justify-between gap-4 mt-4 text-xs text-gray-500 shrink-0">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-gray-900" />
+              <span className="text-gray-900">Đã kín</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-brand-blue" />
+              <span className="text-brand-blue">Vẫn còn chỗ</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-brand-red" />
+              <span className="text-brand-red">Ca đã chọn</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-brand-blue" />
-            <span className="text-brand-blue">Vẫn còn chỗ</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-brand-red" />
-            <span className="text-brand-red">Ca đã chọn</span>
+          <div className="text-sm font-semibold text-brand-blue">
+            Số ca đã đăng ký trong tháng: {registeredCount}/5
           </div>
         </div>
       </div>
@@ -465,6 +488,7 @@ export function ShiftCalendar({
               onConfirm={handleConfirm}
               onCancel={(id) => cancelMutation.mutate(id)}
               isMutating={isMutating}
+              registeredCount={registeredCount}
             />
           </div>
         )}

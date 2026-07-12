@@ -18,6 +18,7 @@ interface Volunteer {
   email: string | null;
   status: 'ACTIVE' | 'INACTIVE';
   min_shifts_per_month: number;
+  role: 'ADMIN' | 'VOLUNTEER';
   _count: { registrations: number };
 }
 
@@ -43,9 +44,10 @@ export default function VolunteersPage() {
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editMinShifts, setEditMinShifts] = useState(2);
+  const [editRole, setEditRole] = useState<'ADMIN' | 'VOLUNTEER'>('VOLUNTEER');
 
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createForm, setCreateForm] = useState({ fullname: '', ma_tnv: '', date_of_birth: '', date_joined: '', email: '' });
+  const [createForm, setCreateForm] = useState({ fullname: '', ma_tnv: '', date_of_birth: '', date_joined: '', email: '', role: 'VOLUNTEER' });
   const [showPassword, setShowPassword] = useState(false);
   const [createdPassword, setCreatedPassword] = useState<string | null>(null);
 
@@ -79,7 +81,7 @@ export default function VolunteersPage() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'volunteers'] });
       setCreatedPassword(data.generatedPassword);
       setShowPassword(false);
-      setCreateForm({ fullname: '', ma_tnv: '', date_of_birth: '', date_joined: '', email: '' });
+      setCreateForm({ fullname: '', ma_tnv: '', date_of_birth: '', date_joined: '', email: '', role: 'VOLUNTEER' });
       toast({ title: 'Tạo tài khoản thành công' });
     },
     onError: (err: any) =>
@@ -240,6 +242,17 @@ export default function VolunteersPage() {
                     onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
                   />
                 </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Vai trò <span className="text-red-500">*</span></Label>
+                  <select
+                    className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-gray-900"
+                    value={createForm.role}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, role: e.target.value }))}
+                  >
+                    <option value="VOLUNTEER">Tình nguyện viên (VOLUNTEER)</option>
+                    <option value="ADMIN">Quản trị viên (ADMIN)</option>
+                  </select>
+                </div>
                 <div className="sm:col-span-2">
                   <p className="text-xs text-gray-500 mb-2">
                     Mật khẩu sẽ được tạo tự động: <span className="font-mono">{createForm.ma_tnv || 'MãTNV'}{createForm.date_of_birth ? createForm.date_of_birth.split('-').reverse().join('') : 'DDMMYYYY'}</span>
@@ -361,22 +374,36 @@ export default function VolunteersPage() {
               {editingId === vol.id ? (
                 <div className="space-y-3">
                   <p className="font-medium">{vol.fullname} — {vol.ma_tnv}</p>
-                  <div className="flex items-center gap-3">
-                    <Label htmlFor="minShifts" className="shrink-0 text-sm">Ca tối thiểu/tháng</Label>
-                    <Input
-                      id="minShifts"
-                      type="number"
-                      min={0}
-                      max={20}
-                      value={editMinShifts}
-                      onChange={(e) => setEditMinShifts(parseInt(e.target.value) || 0)}
-                      className="w-20"
-                    />
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <Label htmlFor="minShifts" className="shrink-0 text-sm">Ca tối thiểu/tháng</Label>
+                      <Input
+                        id="minShifts"
+                        type="number"
+                        min={0}
+                        max={20}
+                        value={editMinShifts}
+                        onChange={(e) => setEditMinShifts(parseInt(e.target.value) || 0)}
+                        className="w-20 text-gray-900"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Label htmlFor="editRole" className="shrink-0 text-sm">Vai trò</Label>
+                      <select
+                        id="editRole"
+                        className="flex h-9 rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-44 text-gray-900"
+                        value={editRole}
+                        onChange={(e) => setEditRole(e.target.value as 'ADMIN' | 'VOLUNTEER')}
+                      >
+                        <option value="VOLUNTEER">Tình nguyện viên</option>
+                        <option value="ADMIN">Quản trị viên</option>
+                      </select>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      onClick={() => updateMutation.mutate({ id: vol.id, body: { min_shifts_per_month: editMinShifts } })}
+                      onClick={() => updateMutation.mutate({ id: vol.id, body: { min_shifts_per_month: editMinShifts, role: editRole } })}
                       disabled={updateMutation.isPending}
                     >
                       Lưu
@@ -393,6 +420,9 @@ export default function VolunteersPage() {
                       <Badge variant={vol.status === 'ACTIVE' ? 'default' : 'secondary'}>
                         {vol.status === 'ACTIVE' ? 'Hoạt động' : 'Không hoạt động'}
                       </Badge>
+                      <Badge variant={vol.role === 'ADMIN' ? 'destructive' : 'info'}>
+                        {vol.role === 'ADMIN' ? 'Quản trị viên' : 'Tình nguyện viên'}
+                      </Badge>
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">
                       {vol.email || 'Chưa có email'} • Tối thiểu {vol.min_shifts_per_month} ca/tháng •{' '}
@@ -404,7 +434,7 @@ export default function VolunteersPage() {
                       size="sm"
                       variant="ghost"
                       title="Chỉnh sửa"
-                      onClick={() => { setEditingId(vol.id); setEditMinShifts(vol.min_shifts_per_month); }}
+                      onClick={() => { setEditingId(vol.id); setEditMinShifts(vol.min_shifts_per_month); setEditRole(vol.role || 'VOLUNTEER'); }}
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>

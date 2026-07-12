@@ -59,3 +59,13 @@ desktop.ini
 
 # Misc
 *.tgz
+
+.docx
+ADMIN_MANUAL.docx
+ADMIN_MANUAL.md
+generate_docx.py
+~$LUNTEER_MANUAL.docx
+.gitignore
+~$MIN_MANUAL.docx
+VOLUNTEER_MANUAL.docx
+VOLUNTEER_MANUAL.md

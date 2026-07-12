@@ -45,13 +45,7 @@ enum RequestStatus {
   CANCELED
 }
 
-enum AttendanceStatus {
-  PRESENT
-  LATE
-  ABSENT
-  FORGOT
-  UNCONFIRMED
-}
+
 
 enum NotificationType {
   INFO
@@ -82,7 +76,7 @@ model User {
   registrations    Registration[]
   sentRequests     ShiftRequest[] @relation("Sender")
   receivedRequests ShiftRequest[] @relation("Receiver")
-  attendances      Attendance[]
+
   notifications    Notification[]
 
   createdAt DateTime @default(now())
@@ -104,7 +98,7 @@ model ShiftInstance {
   isPublished Boolean @default(false)
 
   registrations Registration[]
-  attendances   Attendance[]
+
   requestsFrom  ShiftRequest[] @relation("ShiftFrom")
   requestsTo    ShiftRequest[] @relation("ShiftTo")
 
@@ -159,24 +153,7 @@ model ShiftRequest {
   @@index([status])
 }
 
-model Attendance {
-  id        Int              @id @default(autoincrement())
-  userId    Int
-  shiftId   Int
-  status    AttendanceStatus
-  note      String?          @db.Text
-  updatedBy Int
 
-  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  shift ShiftInstance @relation(fields: [shiftId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([userId, shiftId])
-  @@index([userId])
-  @@index([shiftId])
-}
 
 model Notification {
   id      Int              @id @default(autoincrement())

@@ -1,7 +1,6 @@
 import {
   PrismaClient,
   RegistrationType,
-  AttendanceStatus,
 } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -103,51 +102,6 @@ async function main() {
 
   console.log(`✅ Registrations: ${created} upserted, ${skipped} errors`);
 
-  // ── Attendance for past registrations ─────────────────────
-  const pastRegs = await prisma.registration.findMany({
-    where: {
-      shift: {
-        date: { gte: monthStart, lt: today },
-      },
-    },
-    include: { shift: true },
-  });
-
-  const statusCycle: AttendanceStatus[] = [
-    AttendanceStatus.PRESENT,
-    AttendanceStatus.PRESENT,
-    AttendanceStatus.PRESENT,
-    AttendanceStatus.LATE,
-    AttendanceStatus.ABSENT,
-  ];
-
-  let attCreated = 0;
-
-  for (let i = 0; i < pastRegs.length; i++) {
-    const reg = pastRegs[i];
-    const status = statusCycle[i % statusCycle.length];
-
-    await prisma.attendance.upsert({
-      where: { userId_shiftId: { userId: reg.userId, shiftId: reg.shiftId } },
-      update: {},
-      create: {
-        userId: reg.userId,
-        shiftId: reg.shiftId,
-        status,
-        note:
-          status === AttendanceStatus.LATE
-            ? 'Đến muộn 10 phút'
-            : status === AttendanceStatus.ABSENT
-              ? 'Vắng không phép'
-              : null,
-        updatedBy: reg.userId,
-      },
-    });
-    attCreated++;
-  }
-
-  console.log(`✅ Attendance records: ${attCreated} upserted for past shifts`);
-
   // ── Summary ───────────────────────────────────────────────
   const totalRegs = await prisma.registration.count({
     where: { shift: { date: { gte: monthStart, lt: monthEnd } } },
@@ -160,7 +114,6 @@ async function main() {
   console.log(`   Total registrations : ${totalRegs}`);
   console.log(`   Confirmed           : ${confirmedRegs}`);
   console.log(`   Pending             : ${totalRegs - confirmedRegs}`);
-  console.log(`   Attendance records  : ${attCreated}`);
   console.log('\n🎉 Done!\n');
 }
 

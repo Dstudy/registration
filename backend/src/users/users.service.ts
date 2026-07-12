@@ -112,7 +112,7 @@ export class UsersService {
     return { message: 'Đổi mật khẩu thành công' };
   }
 
-  async createUser(dto: { fullname: string; ma_tnv: string; date_of_birth: string; date_joined: string; email: string }) {
+  async createUser(dto: { fullname: string; ma_tnv: string; date_of_birth: string; date_joined: string; email: string; role?: Role }) {
     const existing = await this.prisma.user.findUnique({ where: { ma_tnv: dto.ma_tnv } });
     if (existing) throw new ConflictException(`Mã TNV "${dto.ma_tnv}" đã tồn tại`);
 
@@ -128,9 +128,10 @@ export class UsersService {
         date_of_birth: dto.date_of_birth,
         date_joined: dto.date_joined,
         email: dto.email.trim(),
+        role: dto.role || Role.VOLUNTEER,
         password,
       },
-      select: { id: true, ma_tnv: true, fullname: true, email: true, status: true, date_of_birth: true, date_joined: true },
+      select: { id: true, ma_tnv: true, fullname: true, email: true, status: true, date_of_birth: true, date_joined: true, role: true },
     });
 
     return { ...user, generatedPassword: rawPassword };

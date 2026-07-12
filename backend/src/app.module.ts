@@ -13,7 +13,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ShiftsModule } from './shifts/shifts.module';
 import { RegistrationsModule } from './registrations/registrations.module';
-import { AttendanceModule } from './attendance/attendance.module';
+
 import { NotificationsModule } from './notifications/notifications.module';
 import { RequestsModule } from './requests/requests.module';
 import { AdminModule } from './admin/admin.module';
@@ -56,7 +56,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
     UsersModule,
     ShiftsModule,
     RegistrationsModule,
-    AttendanceModule,
+
     NotificationsModule,
     RequestsModule,
     AdminModule,
