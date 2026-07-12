@@ -77,13 +77,14 @@ export class AuthController {
   }
 
   private setTokenCookies(res: Response, accessToken: string, refreshToken: string) {
+    const TWENTY_YEARS_MS = 20 * 365 * 24 * 60 * 60 * 1000;
     res.cookie('access_token', accessToken, {
       ...COOKIE_OPTS,
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: TWENTY_YEARS_MS,
     });
     res.cookie('refresh_token', refreshToken, {
       ...COOKIE_OPTS,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: TWENTY_YEARS_MS,
     });
   }
 }

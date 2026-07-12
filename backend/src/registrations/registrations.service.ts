@@ -61,6 +61,28 @@ export class RegistrationsService {
         });
         if (existing) throw new ConflictException('Bạn đã đăng ký ca trực này');
 
+        const shiftDate = new Date(shift.date);
+        const year = shiftDate.getUTCFullYear();
+        const month = shiftDate.getUTCMonth();
+        const startDate = new Date(Date.UTC(year, month, 1));
+        const endDate = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59));
+
+        const userMonthlyRegistrationCount = await tx.registration.count({
+          where: {
+            userId,
+            shift: {
+              date: {
+                gte: startDate,
+                lte: endDate,
+              },
+            },
+          },
+        });
+
+        if (userMonthlyRegistrationCount >= 5) {
+          throw new ConflictException('Bạn chỉ được đăng ký tối đa 5 ca trực trong một tháng');
+        }
+
         await this.checkSameShiftConflict(tx, userId, shiftId, shift.date, shift.shiftName);
 
         const confirmationToken = crypto.randomBytes(32).toString('hex');

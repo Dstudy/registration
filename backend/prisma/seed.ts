@@ -38,14 +38,26 @@ interface ShiftTemplate {
   endMin: number;
 }
 
-const WEEKDAY_SHIFTS: ShiftTemplate[] = [
-  { shiftName: 'Ca Sáng', startHour: 8, startMin: 0, endHour: 12, endMin: 0 },
-];
+const SHIFT_TIMES: Record<string, ShiftTemplate> = {
+  'Ca Sáng':  { shiftName: 'Ca Sáng',  startHour: 8,  startMin: 0,  endHour: 12, endMin: 0  },
+  'Ca Chiều': { shiftName: 'Ca Chiều', startHour: 14, startMin: 0,  endHour: 17, endMin: 0  },
+  'Ca Tối':   { shiftName: 'Ca Tối',   startHour: 19, startMin: 45, endHour: 21, endMin: 30 },
+};
 
-const WEEKEND_SHIFTS: ShiftTemplate[] = [
-  { shiftName: 'Ca Sáng', startHour: 8, startMin: 0, endHour: 12, endMin: 0 },
-  { shiftName: 'Ca Chiều', startHour: 13, startMin: 30, endHour: 17, endMin: 30 },
-];
+// DOW: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+const POSITION_SCHEDULE: Record<ShiftPosition, Record<number, string[]>> = {
+  [ShiftPosition.PLACE_1]: {
+    2: ['Ca Tối'],              // Tuesday
+    4: ['Ca Tối'],              // Thursday
+    6: ['Ca Tối', 'Ca Chiều'], // Saturday
+    0: ['Ca Chiều', 'Ca Sáng'], // Sunday
+  },
+  [ShiftPosition.PLACE_2]: {
+    3: ['Ca Tối'],              // Wednesday
+    5: ['Ca Tối'],              // Friday
+    0: ['Ca Chiều', 'Ca Sáng'], // Sunday
+  },
+};
 
 const POSITIONS = [ShiftPosition.PLACE_1, ShiftPosition.PLACE_2];
 
@@ -55,10 +67,12 @@ async function generateShiftsForMonth(year: number, month: number, publish = fal
 
   for (let day = 1; day <= daysInMonth; day++) {
     const date = buildDate(year, month, day);
-    const templates = isWeekend(date) ? WEEKEND_SHIFTS : WEEKDAY_SHIFTS;
+    const dow = getDayOfWeek(date);
 
-    for (const tmpl of templates) {
-      for (const position of POSITIONS) {
+    for (const position of POSITIONS) {
+      const shiftNames = POSITION_SCHEDULE[position][dow] ?? [];
+      for (const shiftName of shiftNames) {
+        const tmpl = SHIFT_TIMES[shiftName];
         const shift = await prisma.shiftInstance.upsert({
           where: {
             date_shiftName_position: {
@@ -114,6 +128,12 @@ async function main() {
       key: 'registration_month',
       value: `${currentYear}-${String(currentMonth).padStart(2, '0')}`,
     },
+  });
+
+  await prisma.systemConfig.upsert({
+    where: { key: 'shift_reminder_enabled' },
+    update: {},
+    create: { key: 'shift_reminder_enabled', value: 'true' },
   });
 
   console.log('✅ SystemConfig seeded');

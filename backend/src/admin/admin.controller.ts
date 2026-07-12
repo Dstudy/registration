@@ -69,7 +69,7 @@ export class AdminController {
   @Patch('volunteers/:id')
   updateVolunteer(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { status?: string; min_shifts_per_month?: number },
+    @Body() body: { status?: string; min_shifts_per_month?: number; role?: string }
   ) {
     return this.adminService.updateVolunteer(id, body);
   }

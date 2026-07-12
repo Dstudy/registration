@@ -178,7 +178,6 @@ export class AdminService {
   async getVolunteers(search?: string) {
     const volunteers = await this.prisma.user.findMany({
       where: {
-        role: Role.VOLUNTEER,
         ...(search
           ? {
               OR: [
@@ -231,14 +230,15 @@ export class AdminService {
     return { enabled };
   }
 
-  async updateVolunteer(id: number, body: { status?: string; min_shifts_per_month?: number }) {
+  async updateVolunteer(id: number, body: { status?: string; min_shifts_per_month?: number; role?: string }) {
     return this.prisma.user.update({
       where: { id },
       data: {
         ...(body.status ? { status: body.status as UserStatus } : {}),
         ...(body.min_shifts_per_month !== undefined ? { min_shifts_per_month: body.min_shifts_per_month } : {}),
+        ...(body.role ? { role: body.role as Role } : {}),
       },
-      select: { id: true, ma_tnv: true, fullname: true, status: true, min_shifts_per_month: true },
+      select: { id: true, ma_tnv: true, fullname: true, status: true, min_shifts_per_month: true, role: true },
     });
   }
 

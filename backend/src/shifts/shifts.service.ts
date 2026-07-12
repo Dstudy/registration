@@ -219,7 +219,7 @@ export class ShiftsService {
 
     const dayNum = (info: DayInfo) => (info ? String(info.day) : '');
 
-    // cell with date + names for a shift day
+    // combined date+names cell for single-shift days (Tối T3 / Tối T5 / Tối T4 / Tối T6)
     const shiftCell = (info: DayInfo, shiftName: string) => {
       const d = dayNum(info);
       const n = names(info?.dateStr, shiftName);
@@ -230,8 +230,9 @@ export class ShiftsService {
     const isP1 = position === ShiftPosition.PLACE_1;
     const posLabel = isP1 ? '1' : '2';
     const monthLabel = `THÁNG ${String(m).padStart(2, '0')}/${year}`;
-    const totalCols = isP1 ? 9 : 8;
-    const lastColLetter = isP1 ? 'I' : 'H';
+    // P1: T2 | ToiT3 | T4 | ToiT5 | T6 | [T7: date|label|names] | [CN: date|label|names]  = 11 cols
+    // P2: T2 | T3 | ToiT4 | T5 | ToiT6 | T7 | [CN: date|label|names]                       = 9 cols
+    const totalCols = isP1 ? 11 : 9;
 
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet(`CS${posLabel} ${month}`);
@@ -240,42 +241,47 @@ export class ShiftsService {
     const mkBorder = (style: ExcelJS.BorderStyle = 'thin'): ExcelJS.Border => ({ style, color: { argb: 'FF000000' } });
     const solidBorders = { top: mkBorder(), left: mkBorder(), bottom: mkBorder(), right: mkBorder() };
     const dataBorders = { top: mkBorder(), left: mkBorder(), bottom: mkBorder('dotted'), right: mkBorder() };
+    // borders for cells vertically merged across the two shift sub-rows (no seam between them)
+    const mergeTopBorder = { top: mkBorder(), left: mkBorder(), right: mkBorder() };
+    const mergeBottomBorder = { left: mkBorder(), right: mkBorder(), bottom: mkBorder() };
     const hFont = (argb = 'FFFFFFFF'): Partial<ExcelJS.Font> => ({ bold: true, color: { argb }, name: 'Arial', size: 10 });
 
     const DARK_BLUE = 'FF1F3864';
     const YELLOW = 'FFFFD966';
     const ROW_ODD = 'FFFFFFFF';
     const ROW_EVEN = 'FFFFF2CC';
+    const RED = 'FFC00000';
 
     if (isP1) {
-      // T2 | TốiT3 | T4 | TốiT5 | T6 | T7-Chiều | T7-Tối | CN-Sáng | CN-Chiều
+      // T2 | TốiT3 | T4 | TốiT5 | T6 | T7(date|Ca|names) | CN(date|Ca|names)
       ws.columns = [
-        { width: 8 }, { width: 24 }, { width: 8 }, { width: 24 },
-        { width: 8 }, { width: 22 }, { width: 22 }, { width: 22 }, { width: 22 },
+        { width: 8 }, { width: 24 }, { width: 8 }, { width: 24 }, { width: 8 },
+        { width: 6 }, { width: 9 }, { width: 22 },
+        { width: 6 }, { width: 9 }, { width: 22 },
       ];
     } else {
-      // T2 | T3 | TốiT4 | T5 | TốiT6 | T7 | CN-Sáng | CN-Chiều
+      // T2 | T3 | TốiT4 | T5 | TốiT6 | T7 | CN(date|Ca|names)
       ws.columns = [
-        { width: 8 }, { width: 8 }, { width: 22 }, { width: 8 },
-        { width: 22 }, { width: 8 }, { width: 22 }, { width: 22 },
+        { width: 8 }, { width: 8 }, { width: 24 }, { width: 8 }, { width: 24 }, { width: 8 },
+        { width: 6 }, { width: 9 }, { width: 22 },
       ];
     }
 
     // ─── Row 1: Title ────────────────────────────────────────────────────────
     const r1 = ws.addRow(Array(totalCols).fill(''));
     r1.height = 28;
-    ws.mergeCells(`A1:${lastColLetter}1`);
-    Object.assign(ws.getCell('A1'), {
-      value: `LỊCH TRÔNG THƯ VIỆN ${monthLabel} CƠ SỞ ${posLabel}`,
+    ws.mergeCells(1, 1, 1, totalCols);
+    Object.assign(ws.getCell(1, 1), {
+      value: `LỊCH TRỰC THƯ VIỆN ${monthLabel} CƠ SỞ ${posLabel}`,
       fill: mkFill(DARK_BLUE),
       font: { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Arial', size: 13 },
       alignment: { horizontal: 'center', vertical: 'middle' },
       border: solidBorders,
     });
 
-    // ─── Row 2: Main headers ─────────────────────────────────────────────────
+    // ─── Row 2: Headers (single header row — no separate sub-header row) ──────
     const r2 = ws.addRow(Array(totalCols).fill(''));
-    r2.height = 22;
+    r2.height = 24;
     const applyHeader = (col: number, text: string, isShift = false) => {
       const cell = r2.getCell(col);
       cell.value = text;
@@ -284,87 +290,178 @@ export class ShiftsService {
       cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       cell.border = solidBorders;
     };
-    if (isP1) {
-      applyHeader(1, 'Thứ 2'); applyHeader(2, 'Tối thứ 3', true); applyHeader(3, 'Thứ 4');
-      applyHeader(4, 'Tối thứ 5', true); applyHeader(5, 'Thứ 6');
-      ws.mergeCells('F2:G2'); applyHeader(6, 'Thứ 7');
-      ws.mergeCells('H2:I2'); applyHeader(8, 'Chủ nhật');
-      r2.getCell(7).fill = mkFill(DARK_BLUE); r2.getCell(7).border = solidBorders;
-      r2.getCell(9).fill = mkFill(DARK_BLUE); r2.getCell(9).border = solidBorders;
-    } else {
-      applyHeader(1, 'Thứ 2'); applyHeader(2, 'Thứ 3'); applyHeader(3, 'Tối thứ 4', true);
-      applyHeader(4, 'Thứ 5'); applyHeader(5, 'Tối thứ 6', true); applyHeader(6, 'Thứ 7');
-      ws.mergeCells('G2:H2'); applyHeader(7, 'Chủ nhật');
-      r2.getCell(8).fill = mkFill(DARK_BLUE); r2.getCell(8).border = solidBorders;
-    }
-
-    // ─── Row 3: Sub-headers ──────────────────────────────────────────────────
-    const r3 = ws.addRow(Array(totalCols).fill(''));
-    r3.height = 16;
-    for (let c = 1; c <= totalCols; c++) {
-      r3.getCell(c).fill = mkFill(DARK_BLUE);
-      r3.getCell(c).font = hFont();
-      r3.getCell(c).alignment = { horizontal: 'center', vertical: 'middle' };
-      r3.getCell(c).border = solidBorders;
-    }
-    const applySubHeader = (col: number, text: string) => {
-      r3.getCell(col).value = text;
-      r3.getCell(col).fill = mkFill(YELLOW);
-      r3.getCell(col).font = hFont('FF000000');
-    };
-    if (isP1) {
-      applySubHeader(2, ''); applySubHeader(4, ''); // shift cols keep yellow bg
-      r3.getCell(2).fill = mkFill(YELLOW); r3.getCell(2).font = hFont('FF000000');
-      r3.getCell(4).fill = mkFill(YELLOW); r3.getCell(4).font = hFont('FF000000');
-      applySubHeader(6, 'Chiều'); applySubHeader(7, 'Tối');
-      applySubHeader(8, 'Sáng'); applySubHeader(9, 'Chiều');
-    } else {
-      r3.getCell(3).fill = mkFill(YELLOW); r3.getCell(3).font = hFont('FF000000');
-      r3.getCell(5).fill = mkFill(YELLOW); r3.getCell(5).font = hFont('FF000000');
-      applySubHeader(7, 'Sáng'); applySubHeader(8, 'Chiều');
-    }
-
-    // ─── Data rows (one per week) ────────────────────────────────────────────
-    weeks.forEach((week, idx) => {
-      // week[0]=Mon, [1]=Tue, [2]=Wed, [3]=Thu, [4]=Fri, [5]=Sat, [6]=Sun
-      let values: string[];
-      if (isP1) {
-        values = [
-          dayNum(week[0]),                          // T2
-          shiftCell(week[1], 'Ca Tối'),              // Tối T3
-          dayNum(week[2]),                          // T4
-          shiftCell(week[3], 'Ca Tối'),              // Tối T5
-          dayNum(week[4]),                          // T6
-          shiftCell(week[5], 'Ca Chiều'),            // T7-Chiều (date shown here)
-          names(week[5]?.dateStr, 'Ca Tối'),         // T7-Tối   (no date)
-          shiftCell(week[6], 'Ca Sáng'),             // CN-Sáng  (date shown here)
-          names(week[6]?.dateStr, 'Ca Chiều'),       // CN-Chiều (no date)
-        ];
-      } else {
-        values = [
-          dayNum(week[0]),                          // T2
-          dayNum(week[1]),                          // T3
-          shiftCell(week[2], 'Ca Tối'),              // Tối T4
-          dayNum(week[3]),                          // T5
-          shiftCell(week[4], 'Ca Tối'),              // Tối T6
-          dayNum(week[5]),                          // T7
-          shiftCell(week[6], 'Ca Sáng'),             // CN-Sáng (date shown here)
-          names(week[6]?.dateStr, 'Ca Chiều'),       // CN-Chiều (no date)
-        ];
+    const styleHeaderRange = (fromCol: number, toCol: number) => {
+      for (let c = fromCol; c <= toCol; c++) {
+        r2.getCell(c).fill = mkFill(DARK_BLUE);
+        r2.getCell(c).font = hFont();
+        r2.getCell(c).border = solidBorders;
+        r2.getCell(c).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       }
+    };
 
-      const dataRow = ws.addRow(values);
-      const rowNum = dataRow.number;
-      const bg = mkFill(idx % 2 === 0 ? ROW_ODD : ROW_EVEN);
-      const maxLines = Math.max(...values.map((v) => (v ? (v.match(/\n/g) || []).length + 1 : 1)));
-      dataRow.height = Math.max(42, maxLines * 18);
+    // Config describing the two "single value" cell groups and the "split" (2-shift) groups
+    type SingleCol = { idx: number; get: (week: DayInfo[]) => string };
+    type ShiftDef = { name: string; label: string };
+    type GroupConfig = {
+      weekDayIndex: number; // 5 = Saturday, 6 = Sunday
+      dateCol: number;
+      labelCol: number;
+      namesCol: number;
+      shift1: ShiftDef;
+      shift2: ShiftDef;
+    };
 
-      for (let c = 1; c <= totalCols; c++) {
-        const cell = ws.getCell(rowNum, c);
-        cell.fill = bg;
-        cell.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
-        cell.border = dataBorders;
-        cell.font = { name: 'Arial', size: 10 };
+    let singleCols: SingleCol[];
+    let groupConfigs: GroupConfig[];
+
+    if (isP1) {
+      applyHeader(1, 'Thứ 2');
+      applyHeader(2, 'Tối thứ 3', true);
+      applyHeader(3, 'Thứ 4');
+      applyHeader(4, 'Tối thứ 5', true);
+      applyHeader(5, 'Thứ 6');
+      styleHeaderRange(6, 8);
+      ws.mergeCells(2, 6, 2, 8);
+      r2.getCell(6).value = 'Thứ 7';
+      styleHeaderRange(9, 11);
+      ws.mergeCells(2, 9, 2, 11);
+      r2.getCell(9).value = 'Chủ nhật';
+
+      singleCols = [
+        { idx: 1, get: (w) => dayNum(w[0]) }, // T2
+        { idx: 2, get: (w) => shiftCell(w[1], 'Ca Tối') }, // Tối T3
+        { idx: 3, get: (w) => dayNum(w[2]) }, // T4
+        { idx: 4, get: (w) => shiftCell(w[3], 'Ca Tối') }, // Tối T5
+        { idx: 5, get: (w) => dayNum(w[4]) }, // T6
+      ];
+      groupConfigs = [
+        {
+          weekDayIndex: 5, dateCol: 6, labelCol: 7, namesCol: 8,
+          shift1: { name: 'Ca Chiều', label: 'Chiều' },
+          shift2: { name: 'Ca Tối', label: 'Tối' },
+        }, // Thứ 7
+        {
+          weekDayIndex: 6, dateCol: 9, labelCol: 10, namesCol: 11,
+          shift1: { name: 'Ca Sáng', label: 'Sáng' },
+          shift2: { name: 'Ca Chiều', label: 'Chiều' },
+        }, // Chủ nhật
+      ];
+    } else {
+      applyHeader(1, 'Thứ 2');
+      applyHeader(2, 'Thứ 3');
+      applyHeader(3, 'Tối thứ 4', true);
+      applyHeader(4, 'Thứ 5');
+      applyHeader(5, 'Tối thứ 6', true);
+      applyHeader(6, 'Thứ 7');
+      styleHeaderRange(7, 9);
+      ws.mergeCells(2, 7, 2, 9);
+      r2.getCell(7).value = 'Chủ nhật';
+
+      singleCols = [
+        { idx: 1, get: (w) => dayNum(w[0]) }, // T2
+        { idx: 2, get: (w) => dayNum(w[1]) }, // T3
+        { idx: 3, get: (w) => shiftCell(w[2], 'Ca Tối') }, // Tối T4
+        { idx: 4, get: (w) => dayNum(w[3]) }, // T5
+        { idx: 5, get: (w) => shiftCell(w[4], 'Ca Tối') }, // Tối T6
+        { idx: 6, get: (w) => dayNum(w[5]) }, // T7
+      ];
+      groupConfigs = [
+        {
+          weekDayIndex: 6, dateCol: 7, labelCol: 8, namesCol: 9,
+          shift1: { name: 'Ca Sáng', label: 'Sáng' },
+          shift2: { name: 'Ca Chiều', label: 'Chiều' },
+        }, // Chủ nhật
+      ];
+    }
+
+    // ─── Data rows (one or two physical rows per week) ─────────────────────────
+    weeks.forEach((week, idx) => {
+      // a week needs 2 sub-rows whenever it contains a Sat and/or Sun that falls in-month
+      const needsSplit = groupConfigs.some((cfg) => week[cfg.weekDayIndex]);
+      const numSubRows = needsSplit ? 2 : 1;
+
+      const rowStart = ws.rowCount + 1;
+      for (let r = 0; r < numSubRows; r++) ws.addRow(Array(totalCols).fill(''));
+
+      const bg = mkFill(idx % 2 === 0 ? ROW_EVEN : ROW_ODD);
+
+      // single-value day/shift columns — merge vertically across the sub-rows
+      singleCols.forEach((sc) => {
+        const val = sc.get(week);
+        const cellTop = ws.getCell(rowStart, sc.idx);
+        cellTop.value = val;
+        cellTop.fill = bg;
+        cellTop.font = { name: 'Arial', size: 10 };
+        cellTop.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
+
+        if (numSubRows === 2) {
+          ws.mergeCells(rowStart, sc.idx, rowStart + 1, sc.idx);
+          cellTop.border = mergeTopBorder;
+          const cellBottom = ws.getCell(rowStart + 1, sc.idx);
+          cellBottom.fill = bg;
+          cellBottom.border = mergeBottomBorder;
+        } else {
+          cellTop.border = dataBorders;
+        }
+      });
+
+      // 2-shift groups (Thứ 7 / Chủ nhật): date column (merged) + label column + names column, one row per shift
+      groupConfigs.forEach((cfg) => {
+        const dayInfo = week[cfg.weekDayIndex];
+        const dateVal = dayNum(dayInfo);
+
+        const dateCellTop = ws.getCell(rowStart, cfg.dateCol);
+        dateCellTop.value = dateVal;
+        dateCellTop.fill = bg;
+        dateCellTop.font = { bold: true, name: 'Arial', size: 10 };
+        dateCellTop.alignment = { horizontal: 'center', vertical: numSubRows === 2 ? 'middle' : 'top' };
+
+        if (numSubRows === 2) {
+          ws.mergeCells(rowStart, cfg.dateCol, rowStart + 1, cfg.dateCol);
+          dateCellTop.border = mergeTopBorder;
+          const dateCellBottom = ws.getCell(rowStart + 1, cfg.dateCol);
+          dateCellBottom.fill = bg;
+          dateCellBottom.border = mergeBottomBorder;
+
+          [cfg.shift1, cfg.shift2].forEach((shift, si) => {
+            const r = rowStart + si;
+            const labelCell = ws.getCell(r, cfg.labelCol);
+            const namesCell = ws.getCell(r, cfg.namesCol);
+            const nm = dayInfo ? names(dayInfo.dateStr, shift.name) : '';
+            labelCell.value = dayInfo ? shift.label : '';
+            labelCell.font = { bold: true, color: { argb: RED }, name: 'Arial', size: 10 };
+            labelCell.alignment = { horizontal: 'center', vertical: 'middle' };
+            labelCell.fill = bg;
+            labelCell.border = dataBorders;
+
+            namesCell.value = nm;
+            namesCell.font = { name: 'Arial', size: 10 };
+            namesCell.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
+            namesCell.fill = bg;
+            namesCell.border = dataBorders;
+          });
+        } else {
+          // no Sat/Sun in this week at all — leave the group blank but styled
+          dateCellTop.border = dataBorders;
+          [cfg.labelCol, cfg.namesCol].forEach((c) => {
+            const cell = ws.getCell(rowStart, c);
+            cell.fill = bg;
+            cell.border = dataBorders;
+          });
+        }
+      });
+
+      // row heights based on content
+      for (let r = 0; r < numSubRows; r++) {
+        const rowObj = ws.getRow(rowStart + r);
+        let maxLines = 1;
+        rowObj.eachCell({ includeEmpty: false }, (cell) => {
+          if (typeof cell.value === 'string') {
+            const lines = (cell.value.match(/\n/g) || []).length + 1;
+            if (lines > maxLines) maxLines = lines;
+          }
+        });
+        rowObj.height = Math.max(24, maxLines * 16);
       }
     });
 
