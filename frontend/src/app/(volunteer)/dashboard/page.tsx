@@ -7,11 +7,7 @@ import Link from "next/link";
 import { useAuthStore } from "@/stores/auth.store";
 import { toast } from "@/components/ui/use-toast";
 import api from "@/lib/api";
-import {
-  Clock,
-  CheckCircle2,
-  ArrowLeftRight,
-} from "lucide-react";
+import { Clock, CheckCircle2, ArrowLeftRight } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import EllipseRings from "@/components/ui/ellipse-rings";
 
@@ -70,7 +66,7 @@ export default function DashboardPage() {
           </h1>
           <p className="mt-3 text-brand-blue font-normal">
             Tháng này bạn đang có: {String(monthShiftCount).padStart(2, "0")}{" "}
-            lịch trông
+            lịch làm việc
           </p>
         </div>
       </div>
