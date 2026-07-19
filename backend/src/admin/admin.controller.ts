@@ -69,9 +69,14 @@ export class AdminController {
   @Patch('volunteers/:id')
   updateVolunteer(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { status?: string; min_shifts_per_month?: number; role?: string }
+    @Body() body: { status?: string; min_shifts_per_month?: number; role?: string; fullname?: string; email?: string; ma_tnv?: string }
   ) {
     return this.adminService.updateVolunteer(id, body);
+  }
+
+  @Delete('volunteers/:id')
+  deleteVolunteer(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.deleteVolunteer(id);
   }
 
   @Post('send-confirmation-emails')

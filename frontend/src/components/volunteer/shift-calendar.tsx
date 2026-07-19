@@ -326,7 +326,7 @@ export function ShiftCalendar({
       }
       toast({
         title: "Đăng ký thành công",
-        description: "Kiểm tra email để xác nhận ca trực.",
+        description: "BNS sẽ gửi email thông báo xác nhận sau.",
       });
     } catch (err: any) {
       toast({
