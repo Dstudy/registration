@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegistrationsService } from '../registrations/registrations.service';
@@ -230,16 +230,46 @@ export class AdminService {
     return { enabled };
   }
 
-  async updateVolunteer(id: number, body: { status?: string; min_shifts_per_month?: number; role?: string }) {
+  async updateVolunteer(id: number, body: { status?: string; min_shifts_per_month?: number; role?: string; fullname?: string; email?: string; ma_tnv?: string }) {
+    if (body.ma_tnv) {
+      const existing = await this.prisma.user.findUnique({ where: { ma_tnv: body.ma_tnv.trim() } });
+      if (existing && existing.id !== id) {
+        throw new ConflictException(`Mã TNV "${body.ma_tnv}" đã tồn tại`);
+      }
+    }
+    if (body.email) {
+      const existing = await this.prisma.user.findUnique({ where: { email: body.email.trim() } });
+      if (existing && existing.id !== id) {
+        throw new ConflictException(`Email "${body.email}" đã tồn tại`);
+      }
+    }
     return this.prisma.user.update({
       where: { id },
       data: {
         ...(body.status ? { status: body.status as UserStatus } : {}),
         ...(body.min_shifts_per_month !== undefined ? { min_shifts_per_month: body.min_shifts_per_month } : {}),
         ...(body.role ? { role: body.role as Role } : {}),
+        ...(body.fullname ? { fullname: body.fullname.trim() } : {}),
+        ...(body.email ? { email: body.email.trim() } : {}),
+        ...(body.ma_tnv ? { ma_tnv: body.ma_tnv.trim() } : {}),
       },
-      select: { id: true, ma_tnv: true, fullname: true, status: true, min_shifts_per_month: true, role: true },
+      select: { id: true, ma_tnv: true, fullname: true, email: true, status: true, min_shifts_per_month: true, role: true },
     });
+  }
+
+  async deleteVolunteer(id: number) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy người dùng');
+    }
+    if (user.role === Role.ADMIN) {
+      const adminCount = await this.prisma.user.count({ where: { role: Role.ADMIN } });
+      if (adminCount <= 1) {
+        throw new BadRequestException('Không thể xóa admin duy nhất trong hệ thống');
+      }
+    }
+    await this.prisma.user.delete({ where: { id } });
+    return { success: true };
   }
 
   async sendConfirmationEmailsForMonth(month: string): Promise<{ sent: number; skipped: number; alreadySent: number; errors: number }> {

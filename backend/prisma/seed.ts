@@ -275,7 +275,7 @@ async function main() {
     },
     {
       title: 'Đăng ký ca trực thành công',
-      content: 'Bạn đã đăng ký thành công ca trực. Vui lòng kiểm tra email để xác nhận.',
+      content: 'Bạn đã đăng ký thành công ca trực. BNS sẽ gửi email thông báo xác nhận sau.',
       type: NotificationType.INFO,
     },
     {

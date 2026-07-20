@@ -45,6 +45,10 @@ export default function VolunteersPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editMinShifts, setEditMinShifts] = useState(2);
   const [editRole, setEditRole] = useState<'ADMIN' | 'VOLUNTEER'>('VOLUNTEER');
+  const [editFullname, setEditFullname] = useState('');
+  const [editMaTnv, setEditMaTnv] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [deletingVol, setDeletingVol] = useState<Volunteer | null>(null);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createForm, setCreateForm] = useState({ fullname: '', ma_tnv: '', date_of_birth: '', date_joined: '', email: '', role: 'VOLUNTEER' });
@@ -111,6 +115,16 @@ export default function VolunteersPage() {
       setShowDeleteAllConfirm(false);
       setDeleteAllInput('');
       toast({ title: `Đã xóa ${data.deleted} tình nguyện viên` });
+    },
+    onError: (err: any) =>
+      toast({ title: 'Lỗi', description: err?.response?.data?.message, variant: 'destructive' }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/admin/volunteers/${id}`).then((r) => r.data.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'volunteers'] });
+      toast({ title: 'Đã xóa người dùng thành công' });
     },
     onError: (err: any) =>
       toast({ title: 'Lỗi', description: err?.response?.data?.message, variant: 'destructive' }),
@@ -362,6 +376,51 @@ export default function VolunteersPage() {
         </div>
       )}
 
+      {/* Delete single volunteer confirmation modal */}
+      {deletingVol && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-md mx-4 border-red-200">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <Trash2 className="h-5 w-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Xóa tài khoản tình nguyện viên?</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Hành động này sẽ <strong>xóa vĩnh viễn</strong> tài khoản <strong>{deletingVol.fullname} ({deletingVol.ma_tnv})</strong> cùng toàn bộ lịch sử ca trực và dữ liệu liên quan. Không thể hoàn tác.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setDeletingVol(null)}
+                  disabled={deleteMutation.isPending}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={deleteMutation.isPending}
+                  onClick={() => {
+                    deleteMutation.mutate(deletingVol.id, {
+                      onSuccess: () => {
+                        setDeletingVol(null);
+                      }
+                    });
+                  }}
+                >
+                  {deleteMutation.isPending ? 'Đang xóa...' : 'Xóa tài khoản'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <div className="space-y-2">
         {volunteers.length === 0 && (
           <Card>
@@ -373,10 +432,37 @@ export default function VolunteersPage() {
             <CardContent className="p-4">
               {editingId === vol.id ? (
                 <div className="space-y-3">
-                  <p className="font-medium">{vol.fullname} — {vol.ma_tnv}</p>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    <div className="flex items-center gap-3">
-                      <Label htmlFor="minShifts" className="shrink-0 text-sm">Ca tối thiểu/tháng</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="editFullname" className="text-xs">Họ tên</Label>
+                      <Input
+                        id="editFullname"
+                        value={editFullname}
+                        onChange={(e) => setEditFullname(e.target.value)}
+                        className="text-gray-900"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="editMaTnv" className="text-xs">Mã TNV</Label>
+                      <Input
+                        id="editMaTnv"
+                        value={editMaTnv}
+                        onChange={(e) => setEditMaTnv(e.target.value)}
+                        className="text-gray-900"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="editEmail" className="text-xs">Email</Label>
+                      <Input
+                        id="editEmail"
+                        type="email"
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        className="text-gray-900"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="minShifts" className="text-xs font-normal">Ca tối thiểu/tháng</Label>
                       <Input
                         id="minShifts"
                         type="number"
@@ -384,14 +470,14 @@ export default function VolunteersPage() {
                         max={20}
                         value={editMinShifts}
                         onChange={(e) => setEditMinShifts(parseInt(e.target.value) || 0)}
-                        className="w-20 text-gray-900"
+                        className="text-gray-900"
                       />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Label htmlFor="editRole" className="shrink-0 text-sm">Vai trò</Label>
+                    <div className="space-y-1 sm:col-span-2">
+                      <Label htmlFor="editRole" className="text-xs font-normal">Vai trò</Label>
                       <select
                         id="editRole"
-                        className="flex h-9 rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-44 text-gray-900"
+                        className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-gray-900"
                         value={editRole}
                         onChange={(e) => setEditRole(e.target.value as 'ADMIN' | 'VOLUNTEER')}
                       >
@@ -403,7 +489,18 @@ export default function VolunteersPage() {
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      onClick={() => updateMutation.mutate({ id: vol.id, body: { min_shifts_per_month: editMinShifts, role: editRole } })}
+                      onClick={() =>
+                        updateMutation.mutate({
+                          id: vol.id,
+                          body: {
+                            fullname: editFullname,
+                            ma_tnv: editMaTnv,
+                            email: editEmail,
+                            min_shifts_per_month: editMinShifts,
+                            role: editRole,
+                          },
+                        })
+                      }
                       disabled={updateMutation.isPending}
                     >
                       Lưu
@@ -434,7 +531,14 @@ export default function VolunteersPage() {
                       size="sm"
                       variant="ghost"
                       title="Chỉnh sửa"
-                      onClick={() => { setEditingId(vol.id); setEditMinShifts(vol.min_shifts_per_month); setEditRole(vol.role || 'VOLUNTEER'); }}
+                      onClick={() => {
+                        setEditingId(vol.id);
+                        setEditMinShifts(vol.min_shifts_per_month);
+                        setEditRole(vol.role || 'VOLUNTEER');
+                        setEditFullname(vol.fullname || '');
+                        setEditMaTnv(vol.ma_tnv || '');
+                        setEditEmail(vol.email || '');
+                      }}
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
@@ -454,6 +558,14 @@ export default function VolunteersPage() {
                       ) : (
                         <UserCheck className="h-4 w-4 text-green-600" />
                       )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      title="Xóa tài khoản"
+                      onClick={() => setDeletingVol(vol)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
                   </div>
                 </div>
