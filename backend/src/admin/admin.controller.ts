@@ -39,8 +39,7 @@ export class AdminController {
 
   @Get('stats')
   getDashboardStats(@Query('month') month?: string) {
-    const currentMonth = month || new Date().toISOString().slice(0, 7);
-    return this.adminService.getDashboardStats(currentMonth);
+    return this.adminService.getDashboardStats(month);
   }
 
   @Get('kpi')
@@ -49,8 +48,8 @@ export class AdminController {
   }
 
   @Get('reports/shifts/export')
-  async exportShiftReport(@Query('month') month: string, @Res() res: Response) {
-    const monthStr = month || new Date().toISOString().slice(0, 7);
+  async exportShiftReport(@Res() res: Response, @Query('month') month?: string) {
+    const monthStr = month || this.adminService.getDefaultKpiMonth();
     const buf = await this.adminService.exportShiftReportExcel(monthStr);
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

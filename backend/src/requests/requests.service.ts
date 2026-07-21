@@ -428,8 +428,16 @@ export class RequestsService {
 
   private async computeKpiWarnings(request: { senderId: number; receiverId: number | null; type: RequestType }) {
     const now = new Date();
-    const month = now.getMonth() + 1;
-    const year = now.getFullYear();
+    let year = now.getFullYear();
+    let month = now.getMonth(); // 0-indexed
+    if (now.getDate() >= 20) {
+      month += 1;
+      if (month > 11) {
+        month = 0;
+        year += 1;
+      }
+    }
+    const targetMonth = month + 1; // 1-indexed
 
     const countShifts = async (userId: number) => {
       return this.prisma.registration.count({
@@ -437,8 +445,8 @@ export class RequestsService {
           userId,
           shift: {
             date: {
-              gte: new Date(Date.UTC(year, month - 1, 1)),
-              lte: new Date(Date.UTC(year, month, 0, 23, 59, 59)),
+              gte: new Date(Date.UTC(year, targetMonth - 1, 1)),
+              lte: new Date(Date.UTC(year, targetMonth, 0, 23, 59, 59)),
             },
           },
         },

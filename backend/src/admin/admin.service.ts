@@ -22,8 +22,25 @@ export class AdminService {
     private readonly mail: MailService,
   ) {}
 
-  async getDashboardStats(month: string) {
-    const [year, m] = month.split('-').map(Number);
+  getDefaultKpiMonth(date: Date = new Date()): string {
+    let year = date.getFullYear();
+    let month = date.getMonth(); // 0-indexed: 0-11
+    const day = date.getDate();
+
+    if (day >= 20) {
+      month += 1;
+      if (month > 11) {
+        month = 0;
+        year += 1;
+      }
+    }
+
+    return `${year}-${String(month + 1).padStart(2, '0')}`;
+  }
+
+  async getDashboardStats(month?: string) {
+    const targetMonth = month || this.getDefaultKpiMonth();
+    const [year, m] = targetMonth.split('-').map(Number);
     const startDate = new Date(Date.UTC(year, m - 1, 1));
     const endDate = new Date(Date.UTC(year, m, 0, 23, 59, 59));
 
@@ -48,8 +65,7 @@ export class AdminService {
   }
 
   async getKpiList(month?: string) {
-    const now = new Date();
-    const currentMonth = month || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const currentMonth = month || this.getDefaultKpiMonth();
     const [year, m] = currentMonth.split('-').map(Number);
 
     const startDate = new Date(Date.UTC(year, m - 1, 1));
@@ -81,8 +97,9 @@ export class AdminService {
       .sort((a, b) => b.deficit - a.deficit);
   }
 
-  async exportShiftReportExcel(month: string): Promise<Buffer> {
-    const [year, m] = month.split('-').map(Number);
+  async exportShiftReportExcel(month?: string): Promise<Buffer> {
+    const monthStr = month || this.getDefaultKpiMonth();
+    const [year, m] = monthStr.split('-').map(Number);
     const startDate = new Date(Date.UTC(year, m - 1, 1));
     const endDate = new Date(Date.UTC(year, m, 0, 23, 59, 59));
 
