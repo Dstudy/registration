@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSocket } from '@/providers/socket-provider';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, TrendingDown } from 'lucide-react';
+import { AlertTriangle, TrendingDown, Calendar } from 'lucide-react';
 import api from '@/lib/api';
+import { getDefaultKpiMonth } from '@/lib/utils';
 
 interface KpiEntry {
   id: number;
@@ -18,10 +19,14 @@ interface KpiEntry {
 export function KpiSidebar() {
   const socket = useSocket();
   const [highlighted, setHighlighted] = useState<number | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<string>(getDefaultKpiMonth());
 
   const { data, refetch } = useQuery<KpiEntry[]>({
-    queryKey: ['kpi', 'list'],
-    queryFn: () => api.get('/admin/kpi').then((r) => (Array.isArray(r.data.data) ? r.data.data : r.data.data.volunteers) as KpiEntry[]),
+    queryKey: ['kpi', 'list', selectedMonth],
+    queryFn: () =>
+      api.get('/admin/kpi', { params: { month: selectedMonth } }).then((r) =>
+        Array.isArray(r.data.data) ? r.data.data : (r.data.data.volunteers as KpiEntry[])
+      ),
     refetchInterval: 60_000,
   });
 
@@ -35,20 +40,38 @@ export function KpiSidebar() {
       }
     };
     socket.on('kpi.updated', handler);
-    return () => { socket.off('kpi.updated', handler); };
+    return () => {
+      socket.off('kpi.updated', handler);
+    };
   }, [socket, refetch]);
 
   const atRisk = data?.filter((v) => v.shiftCount < v.minShifts) ?? [];
 
   return (
     <aside className="hidden xl:flex flex-col w-72 bg-white border-l min-h-screen">
-      <div className="p-4 border-b">
+      <div className="p-4 border-b space-y-3">
         <div className="flex items-center gap-2">
-          <TrendingDown className="h-4 w-4 text-orange-500" />
-          <span className="font-semibold text-sm text-gray-700">KPI tháng này</span>
+          <TrendingDown className="h-4 w-4 text-orange-500 shrink-0" />
+          <span className="font-semibold text-sm text-gray-800">KPI Tình nguyện viên</span>
         </div>
+
+        <div className="flex items-center justify-between gap-2 bg-gray-50 p-2 rounded-md border border-gray-200">
+          <label htmlFor="kpi-month-picker" className="text-xs text-gray-500 font-medium shrink-0 flex items-center gap-1">
+            <Calendar className="h-3.5 w-3.5 text-gray-400" />
+            Tháng:
+          </label>
+          <input
+            id="kpi-month-picker"
+            type="month"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="text-xs bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium text-gray-700 cursor-pointer"
+          />
+        </div>
+
         {atRisk.length > 0 && (
-          <p className="text-xs text-orange-600 mt-1">
+          <p className="text-xs text-orange-600 font-medium flex items-center gap-1">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
             {atRisk.length} TNV chưa đạt tối thiểu
           </p>
         )}

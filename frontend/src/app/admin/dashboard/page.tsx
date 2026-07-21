@@ -18,13 +18,17 @@ interface Stats {
   pendingRequests: number;
 }
 
+import { getDefaultKpiMonth } from '@/lib/utils';
+
 export default function AdminDashboardPage() {
   const queryClient = useQueryClient();
   const socket = useSocket();
 
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => getDefaultKpiMonth());
+
   const { data } = useQuery<Stats>({
-    queryKey: ['admin', 'stats'],
-    queryFn: () => api.get('/admin/stats').then((r) => r.data.data as Stats),
+    queryKey: ['admin', 'stats', selectedMonth],
+    queryFn: () => api.get('/admin/stats', { params: { month: selectedMonth } }).then((r) => r.data.data as Stats),
   });
 
   const { data: regStatus, isLoading: regLoading } = useQuery<{ open: boolean }>({
@@ -58,9 +62,6 @@ export default function AdminDashboardPage() {
     onError: (err: any) =>
       toast({ title: 'Lỗi', description: err?.response?.data?.message, variant: 'destructive' }),
   });
-
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
   const sendEmailsMutation = useMutation({
     mutationFn: (month: string) =>
