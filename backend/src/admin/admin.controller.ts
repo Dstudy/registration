@@ -98,6 +98,26 @@ export class AdminController {
     return this.adminService.confirmRegistration(id);
   }
 
+  @Patch('registrations/:id/unconfirm')
+  unconfirmRegistration(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.unconfirmRegistration(id);
+  }
+
+  @Patch('registrations/:id/cancel-confirm')
+  cancelConfirmRegistration(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.unconfirmRegistration(id);
+  }
+
+  @Patch('registrations/unconfirm-all')
+  unconfirmAll(@Body() body: { shiftId: number }) {
+    return this.adminService.unconfirmAllRegistrations(body.shiftId);
+  }
+
+  @Patch('registrations/unconfirm-month')
+  unconfirmMonth(@Body() body: { month: string }) {
+    return this.adminService.unconfirmAllForMonth(body.month);
+  }
+
   @Delete('registrations/:id')
   cancelRegistration(@Param('id', ParseIntPipe) id: number) {
     return this.adminService.cancelRegistration(id);

@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/auth.store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import api from "@/lib/api";
@@ -101,9 +102,8 @@ export function AccountPage() {
           <form onSubmit={handlePasswordSubmit} className="space-y-4 max-w-sm">
             <div className="space-y-1.5">
               <Label htmlFor="currentPassword">Mật khẩu hiện tại</Label>
-              <Input
+              <PasswordInput
                 id="currentPassword"
-                type="password"
                 value={pwForm.currentPassword}
                 onChange={(e) =>
                   setPwForm((p) => ({ ...p, currentPassword: e.target.value }))
@@ -119,9 +119,8 @@ export function AccountPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="newPassword">Mật khẩu mới</Label>
-              <Input
+              <PasswordInput
                 id="newPassword"
-                type="password"
                 value={pwForm.newPassword}
                 onChange={(e) =>
                   setPwForm((p) => ({ ...p, newPassword: e.target.value }))
@@ -135,9 +134,8 @@ export function AccountPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="confirmPassword">Xác nhận mật khẩu mới</Label>
-              <Input
+              <PasswordInput
                 id="confirmPassword"
-                type="password"
                 value={pwForm.confirmPassword}
                 onChange={(e) =>
                   setPwForm((p) => ({ ...p, confirmPassword: e.target.value }))

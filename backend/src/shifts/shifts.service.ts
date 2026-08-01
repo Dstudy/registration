@@ -54,6 +54,12 @@ export class ShiftsService {
             id: true,
             userId: true,
             isConfirmed: true,
+            user: {
+              select: {
+                ma_tnv: true,
+                fullname: true,
+              },
+            },
           },
         },
       },
@@ -70,7 +76,12 @@ export class ShiftsService {
         userRegistrationId: userReg ? userReg.id : null,
         hasUnconfirmed,
         _count: undefined,
-        registrations: undefined,
+        registrations: s.registrations.map((r) => ({
+          id: r.id,
+          isConfirmed: r.isConfirmed,
+          ma_tnv: r.user?.ma_tnv,
+          fullname: r.user?.fullname,
+        })),
       };
     });
   }

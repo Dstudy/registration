@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { clsx } from "clsx";
 import styles from "./index.module.css";
+import { PasswordInput } from "@/components/ui/password-input";
 
 const loginSchema = z.object({
   ma_tnv: z.string().min(1, "Vui lòng nhập mã TNV"),
@@ -104,12 +105,11 @@ export default function LoginPage() {
               <label htmlFor="password" className="text-sm text-gray-600">
                 Mật khẩu
               </label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
                 placeholder="Nhập mật khẩu"
                 autoComplete="current-password"
-                className="w-full border-0 border-b border-gray-300 focus:border-brand-blue focus:ring-0 px-0 py-1.5 text-sm outline-none transition-colors"
+                className="w-full h-auto border-0 border-b border-gray-300 rounded-none focus:border-brand-blue focus:ring-0 px-0 py-1.5 pr-8 text-sm outline-none transition-colors"
                 {...register("password")}
               />
               {errors.password && (

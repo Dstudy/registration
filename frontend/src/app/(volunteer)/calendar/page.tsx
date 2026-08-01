@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { format, addMonths, subMonths, parseISO } from 'date-fns';
+import { format, addMonths, subMonths, parseISO, getDate } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,10 @@ interface RegistrationStatus {
 }
 
 export default function CalendarPage() {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const today = new Date();
+  const [currentDate, setCurrentDate] = useState(
+    getDate(today) >= 20 ? addMonths(today, 1) : today
+  );
   const month = format(currentDate, 'yyyy-MM');
 
   const { data: status } = useQuery<RegistrationStatus>({
@@ -38,9 +41,9 @@ export default function CalendarPage() {
   return (
     <div className="flex flex-col h-full gap-4">
       {/* Month navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-brand-blue">Đăng ký trông thư viện</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-brand-blue">Đăng ký trông thư viện</h1>
           <div className="flex items-center gap-2 mt-1">
             {isRegistrationOpen ? (
               <Badge variant="success">Đăng ký đang mở</Badge>
@@ -49,16 +52,17 @@ export default function CalendarPage() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between sm:justify-start gap-2 bg-gray-50 sm:bg-transparent p-2 sm:p-0 rounded-lg border sm:border-0 border-gray-200">
           <Button
             variant="outline"
             size="icon"
             onClick={() => setCurrentDate(subMonths(currentDate, 1))}
             disabled={isRegistrationOpen}
+            className="h-8 w-8 sm:h-10 sm:w-10"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="font-semibold min-w-32 text-center">
+          <span className="font-semibold text-sm sm:text-base min-w-28 sm:min-w-32 text-center capitalize">
             {format(currentDate, 'MMMM yyyy', { locale: vi })}
           </span>
           <Button
@@ -66,6 +70,7 @@ export default function CalendarPage() {
             size="icon"
             onClick={() => setCurrentDate(addMonths(currentDate, 1))}
             disabled={isRegistrationOpen}
+            className="h-8 w-8 sm:h-10 sm:w-10"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>

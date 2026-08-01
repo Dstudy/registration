@@ -102,44 +102,50 @@ export default function AdminShiftsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-gray-500 mb-2">
-            {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((d) => (
+          <div className="grid grid-cols-6 gap-1 text-center text-xs font-medium text-gray-500 mb-2">
+            {['CN', 'T3', 'T4', 'T5', 'T6', 'T7'].map((d) => (
               <div key={d}>{d}</div>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-1">
-            {Array.from({ length: getDay(monthStart) }).map((_, i) => (
+          {/* Monday (T2) is hidden — no shifts on Mondays */}
+          <div className="grid grid-cols-6 gap-1">
+            {/* Leading empty cells: Sun=col0, skip Mon, Tue=col1 … Sat=col5 */}
+            {Array.from({
+              length: getDay(monthStart) === 0 ? 0 : getDay(monthStart) - 1,
+            }).map((_, i) => (
               <div key={`empty-${i}`} />
             ))}
-            {days.map((day) => {
-              const key = format(day, 'yyyy-MM-dd');
-              const dayShifts = shiftsByDate[key] || [];
-              const isToday = key === format(new Date(), 'yyyy-MM-dd');
-              return (
-                <div
-                  key={key}
-                  className={`min-h-[80px] p-1 border rounded text-xs ${isToday ? 'border-blue-400 bg-blue-50' : 'border-gray-100'}`}
-                >
-                  <div className={`font-semibold mb-1 ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>
-                    {format(day, 'd')}
+            {days
+              .filter((day) => getDay(day) !== 1) /* hide Mondays */
+              .map((day) => {
+                const key = format(day, 'yyyy-MM-dd');
+                const dayShifts = shiftsByDate[key] || [];
+                const isToday = key === format(new Date(), 'yyyy-MM-dd');
+                return (
+                  <div
+                    key={key}
+                    className={`min-h-[80px] p-1 border rounded text-xs ${isToday ? 'border-blue-400 bg-blue-50' : 'border-gray-100'}`}
+                  >
+                    <div className={`font-semibold mb-1 ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>
+                      {format(day, 'd')}
+                    </div>
+                    {dayShifts.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => toggleMutation.mutate(s.id)}
+                        title={s.isActive ? 'Nhấn để vô hiệu hóa' : 'Nhấn để kích hoạt'}
+                        className={`block w-full text-left px-1 py-0.5 rounded mb-0.5 truncate transition-colors ${
+                          s.isActive
+                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200 line-through'
+                        }`}
+                      >
+                        {s.shiftName === 'Ca Sáng' ? 'CS' : s.shiftName === 'Ca Chiều' ? 'CC' : 'CT'} P{s.position === 'PLACE_1' ? '1' : '2'}
+                      </button>
+                    ))}
                   </div>
-                  {dayShifts.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => toggleMutation.mutate(s.id)}
-                      title={s.isActive ? 'Nhấn để vô hiệu hóa' : 'Nhấn để kích hoạt'}
-                      className={`block w-full text-left px-1 py-0.5 rounded mb-0.5 truncate transition-colors ${
-                        s.isActive
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                          : 'bg-gray-100 text-gray-400 hover:bg-gray-200 line-through'
-                      }`}
-                    >
-                      {s.shiftName === 'Ca Sáng' ? 'CS' : s.shiftName === 'Ca Chiều' ? 'CC' : 'CT'} P{s.position === 'PLACE_1' ? '1' : '2'}
-                    </button>
-                  ))}
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
           <p className="text-xs text-gray-400 mt-2">Nhấn vào ca để bật/tắt. CS = Ca Sáng, CC = Ca Chiều, CT = Ca Tối, P1/P2 = Vị trí.</p>
         </CardContent>
