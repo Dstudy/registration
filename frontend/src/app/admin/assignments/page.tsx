@@ -48,7 +48,7 @@ interface Volunteer {
   status: string;
 }
 
-const WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+const WEEKDAYS = ['CN', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
 function shiftLabel(s: Shift) {
   const name = s.shiftName === 'Ca Sáng' ? 'CS' : s.shiftName === 'Ca Chiều' ? 'CC' : 'CT';
@@ -199,8 +199,11 @@ export default function AssignmentsPage() {
   };
 
   const monthStart = startOfMonth(currentDate);
-  const days = eachDayOfInterval({ start: monthStart, end: endOfMonth(currentDate) });
-  const firstDow = getDay(monthStart);
+  const days = eachDayOfInterval({ start: monthStart, end: endOfMonth(currentDate) }).filter(
+    (day) => getDay(day) !== 1
+  );
+  const startDow = getDay(monthStart);
+  const leadingEmptyCount = startDow === 0 ? 0 : startDow - 1;
 
   const shiftsByDate: Record<string, Shift[]> = {};
   shifts.forEach((s) => {
@@ -293,16 +296,16 @@ export default function AssignmentsPage() {
               </div>
             </CardHeader>
             <CardContent className="p-2">
-              <div className="grid grid-cols-7 mb-1">
+              <div className="grid grid-cols-6 mb-1">
                 {WEEKDAYS.map((d) => (
                   <div key={d} className="text-center text-xs font-semibold text-gray-500 py-1">
                     {d}
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 gap-px bg-gray-200 border border-gray-200 rounded overflow-hidden">
-                {Array.from({ length: firstDow }).map((_, i) => (
-                  <div key={`e${i}`} className="bg-gray-50 min-h-[88px]" />
+              <div className="grid grid-cols-6 gap-px bg-gray-200 border border-gray-200 rounded overflow-hidden">
+                {Array.from({ length: leadingEmptyCount }).map((_, i) => (
+                  <div key={`e${i}`} className="bg-gray-50 min-h-[105px]" />
                 ))}
                 {days.map((day) => {
                   const key = format(day, 'yyyy-MM-dd');
@@ -311,7 +314,7 @@ export default function AssignmentsPage() {
                   return (
                     <div
                       key={key}
-                      className={`bg-white min-h-[88px] p-1 ${isToday ? 'bg-blue-50/60' : ''}`}
+                      className={`bg-white min-h-[105px] p-1 ${isToday ? 'bg-blue-50/60' : ''}`}
                     >
                       <span
                         className={`text-xs font-semibold block mb-1 ${
@@ -328,7 +331,7 @@ export default function AssignmentsPage() {
                             key={shift.id}
                             onClick={() => setSelectedShiftId(isSelected ? null : shift.id)}
                             title={shift.hasUnconfirmed ? 'Có tình nguyện viên chưa xác nhận' : undefined}
-                            className={`w-full text-left px-1 py-0.5 rounded text-[10px] leading-tight mb-0.5 border transition-all ${
+                            className={`w-full text-left px-1.5 py-1 rounded text-[11px] leading-tight mb-1 border transition-all ${
                               isSelected
                                 ? 'bg-blue-600 text-white border-blue-700 shadow-sm'
                                 : isFull
@@ -338,24 +341,24 @@ export default function AssignmentsPage() {
                                 : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
                             }`}
                           >
-                            <div className="flex items-center justify-between font-medium truncate">
+                            <div className="flex items-center justify-between font-semibold truncate text-[11px]">
                               <span>{shiftLabel(shift)}</span>
                               {shift.hasUnconfirmed && (
                                 <Clock
-                                  className={`h-2.5 w-2.5 shrink-0 ${
+                                  className={`h-3 w-3 shrink-0 ${
                                     isSelected ? 'text-amber-200' : 'text-amber-500'
                                   }`}
                                 />
                               )}
                             </div>
                             {shift.registrations && shift.registrations.length > 0 && (
-                              <div className="grid grid-cols-2 gap-0.5 mt-1">
+                              <div className="grid grid-cols-2 gap-1 mt-1">
                                 {shift.registrations.map((reg) => {
                                   const givenName = reg.fullname?.trim().split(' ').pop() || '';
                                   return (
                                     <div
                                       key={reg.id || reg.ma_tnv}
-                                      className={`px-0.5 py-0.25 text-[8px] leading-tight border rounded text-center truncate ${
+                                      className={`px-1 py-0.5 text-[10px] font-medium leading-tight border rounded text-center truncate ${
                                         isSelected
                                           ? reg.isConfirmed
                                             ? 'bg-blue-700 text-white border-blue-400'
