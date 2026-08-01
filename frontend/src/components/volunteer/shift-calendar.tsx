@@ -8,7 +8,7 @@ import { getSocket } from "@/lib/socket";
 import { useAuthStore } from "@/stores/auth.store";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 
 interface ShiftInstance {
   id: number;
@@ -76,6 +76,7 @@ interface DayPanelProps {
   onCancel: (shiftId: number) => void;
   isMutating: boolean;
   registeredCount: number;
+  onClose?: () => void;
 }
 
 function DayPanel({
@@ -86,6 +87,7 @@ function DayPanel({
   onCancel,
   isMutating,
   registeredCount,
+  onClose,
 }: DayPanelProps) {
   const [selected, setSelected] = useState<number[]>([]);
 
@@ -132,18 +134,28 @@ function DayPanel({
   const dateLabel = `${weekdayName[date.getUTCDay()]}, Ngày ${pad(date.getUTCDate())}/${pad(date.getUTCMonth() + 1)}/${date.getUTCFullYear()}`;
 
   return (
-    <div className="w-full flex flex-col gap-3 rounded-tr-[2rem] bg-[#e2eef9] border border-gray-400 p-6 shadow-xl">
-      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3">
+    <div className="w-full flex flex-col gap-3 rounded-t-[1.5rem] lg:rounded-t-none lg:rounded-tr-[2rem] bg-[#e2eef9] border border-gray-400 p-4 sm:p-6 shadow-xl relative max-h-[85vh]">
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          className="lg:hidden absolute top-3 right-3 p-1.5 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700 transition-colors z-10"
+          aria-label="Đóng"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      )}
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pr-1">
         {groups.map((group) => (
           <div key={group[0].position} className="flex-1 flex flex-col gap-2">
-            <p className="text-base font-semibold leading-snug shrink-0">
+            <p className="text-sm sm:text-base font-semibold leading-snug shrink-0 pr-8 lg:pr-0">
               <span className="text-blue-700">{dateLabel}</span>
               {" | "}
               <span className="text-brand-red">
                 {locationLabel[group[0].position]}
               </span>
             </p>
-            <div className="flex flex-col gap-1.5 h-22">
+            <div className="flex flex-col gap-1.5">
               {group.map((shift) => {
                 const isFull = shift.registrationCount >= shift.maxSlots;
                 const checked = selected.includes(shift.id);
@@ -157,7 +169,7 @@ function DayPanel({
                   <div
                     key={shift.id}
                     className={cn(
-                      "flex-1 flex items-center justify-between gap-2 rounded-tr-xl px-4 py-2.5 text-sm font-bold tracking-wide",
+                      "flex-1 flex items-center justify-between gap-2 rounded-tr-xl px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold tracking-wide",
                       shift.isUserRegistered
                         ? "bg-brand-red text-white"
                         : isFull || !shift.isActive
@@ -175,7 +187,7 @@ function DayPanel({
                         type="button"
                         onClick={() => onCancel(shift.id)}
                         disabled={isMutating}
-                        className="shrink-0 rounded-tr bg-white/20 px-2.5 py-1.5 text-xs hover:bg-white/30 disabled:opacity-50"
+                        className="shrink-0 rounded-tr bg-white/20 px-2 py-1 text-xs hover:bg-white/30 disabled:opacity-50"
                       >
                         HỦY
                       </button>
@@ -186,7 +198,7 @@ function DayPanel({
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggle(shift)}
-                          className="h-5 w-5 rounded-tr-sm accent-white"
+                          className="h-4 w-4 sm:h-5 sm:w-5 rounded-tr-sm accent-white"
                         />
                       </label>
                     ) : null}
@@ -201,9 +213,12 @@ function DayPanel({
       <div className="border-t border-gray-400 pt-3 shrink-0">
         <button
           type="button"
-          onClick={() => onConfirm(selected)}
+          onClick={() => {
+            onConfirm(selected);
+            if (onClose) onClose();
+          }}
           disabled={!selected.length || isMutating}
-          className="w-full h-14 rounded-full bg-brand-red py-3 text-sm font-light tracking-wide text-white hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="w-full h-12 sm:h-14 rounded-full bg-brand-red py-3 text-sm font-light tracking-wide text-white hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {isMutating ? (
             <Loader2 className="mx-auto h-4 w-4 animate-spin" />
@@ -244,7 +259,7 @@ function DayCell({
       onMouseLeave={onLeave}
       onClick={() => hasShifts && onToggleLock(day)}
       className={cn(
-        "w-full aspect-square rounded-tr-xl md:rounded-tr-2xl flex items-center justify-center text-sm md:text-base font-bold ring-2 ring-transparent transition-all hover:scale-110",
+        "relative w-full aspect-square rounded-tr-xl md:rounded-tr-2xl flex items-center justify-center text-sm md:text-base font-bold ring-2 ring-transparent transition-all active:scale-95 hover:scale-105 select-none",
         dayStatusClass[status],
         hasShifts ? "cursor-pointer" : "cursor-default",
         (isHovered || isLocked) && "ring-blue-300 ring-offset-1",
@@ -252,6 +267,9 @@ function DayCell({
       )}
     >
       {day}
+      {hasShifts && (
+        <span className="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full bg-white/70 lg:hidden" />
+      )}
     </div>
   );
 }
@@ -414,15 +432,23 @@ export function ShiftCalendar({
   const displayedShifts = displayedDay ? shiftsByDay[displayedDay] || [] : [];
 
   return (
-    <div className="h-full rounded-3xl p-4 md:p-6 flex items-center gap-3 md:gap-6">
+    <div className="h-full rounded-3xl p-3 sm:p-4 md:p-6 flex flex-col md:flex-row items-center gap-3 md:gap-6">
+      <div className="flex md:hidden items-center justify-between w-full border-b pb-2 mb-1">
+        <span className="text-base font-bold text-blue-600">
+          Tháng {m}/{year}
+        </span>
+        <span className="text-xs text-gray-500 italic">
+          (Chạm vào ngày để xem ca)
+        </span>
+      </div>
       <div className="hidden md:flex items-center justify-center shrink-0">
         <span className="text-xl lg:text-3xl font-normal text-blue-600 [writing-mode:vertical-rl] rotate-180 whitespace-nowrap">
           Tháng {m}|{year}
         </span>
       </div>
 
-      <div className="flex-1 min-w-0 h-full flex flex-col">
-        <div className="grid grid-cols-6 gap-2 w-full">
+      <div className="flex-1 min-w-0 h-full flex flex-col w-full">
+        <div className="grid grid-cols-6 gap-1.5 sm:gap-2 w-full">
           {weekDayHeaders.map((d) => (
             <div
               key={d}
@@ -433,7 +459,7 @@ export function ShiftCalendar({
           ))}
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="grid grid-cols-6 gap-2 w-full p-2">
+          <div className="grid grid-cols-6 gap-1.5 sm:gap-2 w-full p-1 sm:p-2">
             {Array.from({ length: leadingEmpty }).map((_, i) => (
               <div key={`empty-${i}`} className="aspect-square" />
             ))}
@@ -452,28 +478,28 @@ export function ShiftCalendar({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4 mt-4 text-xs text-gray-500 shrink-0">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-gray-900" />
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-4 text-xs text-gray-500 shrink-0">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3.5 h-3.5 rounded bg-gray-900" />
               <span className="text-gray-900">Đã kín</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-brand-blue" />
+            <div className="flex items-center gap-1.5">
+              <div className="w-3.5 h-3.5 rounded bg-brand-blue" />
               <span className="text-brand-blue">Vẫn còn chỗ</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-brand-red" />
+            <div className="flex items-center gap-1.5">
+              <div className="w-3.5 h-3.5 rounded bg-brand-red" />
               <span className="text-brand-red">Ca đã chọn</span>
             </div>
           </div>
-          <div className="text-sm font-semibold text-brand-blue">
-            Số ca đã đăng ký trong tháng: {registeredCount}/5
+          <div className="text-xs sm:text-sm font-semibold text-brand-blue">
+            Số ca đã đăng ký: {registeredCount}/5
           </div>
         </div>
       </div>
 
-      {/* Docked options panel — shows on hover, and stays pinned ("locked") once a day is clicked */}
+      {/* Docked options panel for desktop (lg+) */}
       <div className="hidden lg:flex flex-1 min-w-0 self-stretch items-start pt-9">
         {displayedDay !== null && displayedShifts.length > 0 && (
           <div
@@ -493,6 +519,31 @@ export function ShiftCalendar({
           </div>
         )}
       </div>
+
+      {/* Mobile Slide-up Bottom Drawer Panel (< lg) */}
+      {lockedDay !== null && displayedShifts.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setLockedDay(null)}
+        >
+          <div
+            className="w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DayPanel
+              date={new Date(Date.UTC(year, m - 1, lockedDay))}
+              shifts={displayedShifts}
+              isRegistrationOpen={isRegistrationOpen}
+              onConfirm={handleConfirm}
+              onCancel={(id) => cancelMutation.mutate(id)}
+              isMutating={isMutating}
+              registeredCount={registeredCount}
+              onClose={() => setLockedDay(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

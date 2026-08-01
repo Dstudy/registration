@@ -12,6 +12,13 @@ import { toast } from '@/components/ui/use-toast';
 import api from '@/lib/api';
 import { ChevronLeft, ChevronRight, Users, Search, X, Plus, CheckCircle, Clock, Loader2, Trash2, FileDown } from 'lucide-react';
 
+interface ShiftVolunteer {
+  id: number;
+  isConfirmed: boolean;
+  ma_tnv: string;
+  fullname: string;
+}
+
 interface Shift {
   id: number;
   date: string;
@@ -21,6 +28,7 @@ interface Shift {
   isActive: boolean;
   registrationCount: number;
   hasUnconfirmed?: boolean;
+  registrations?: ShiftVolunteer[];
 }
 
 interface Registration {
@@ -29,7 +37,7 @@ interface Registration {
   user: { id: number; ma_tnv: string; fullname: string };
 }
 
-interface ShiftDetail extends Shift {
+interface ShiftDetail extends Omit<Shift, 'registrations'> {
   registrations: Registration[];
 }
 
@@ -111,6 +119,7 @@ export default function AssignmentsPage() {
         title: count > 0 ? `Đã xác nhận ${count} đăng ký trong tháng` : 'Tất cả đăng ký đã được xác nhận',
       });
       queryClient.invalidateQueries({ queryKey: ['admin', 'shift-detail', selectedShiftId] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'assignments', monthStr] });
     },
     onError: (err: any) =>
       toast({ title: 'Lỗi', description: err?.response?.data?.message, variant: 'destructive' }),
@@ -125,6 +134,7 @@ export default function AssignmentsPage() {
         title: count > 0 ? `Đã xác nhận ${count} TNV trong ca này` : 'Tất cả TNV đã được xác nhận',
       });
       queryClient.invalidateQueries({ queryKey: ['admin', 'shift-detail', selectedShiftId] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'assignments', monthStr] });
     },
     onError: (err: any) =>
       toast({ title: 'Lỗi', description: err?.response?.data?.message, variant: 'destructive' }),
@@ -136,6 +146,19 @@ export default function AssignmentsPage() {
     onSuccess: () => {
       toast({ title: 'Đã xác nhận TNV' });
       queryClient.invalidateQueries({ queryKey: ['admin', 'shift-detail', selectedShiftId] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'assignments', monthStr] });
+    },
+    onError: (err: any) =>
+      toast({ title: 'Lỗi', description: err?.response?.data?.message, variant: 'destructive' }),
+  });
+
+  const unconfirmRegMutation = useMutation({
+    mutationFn: (registrationId: number) =>
+      api.patch(`/admin/registrations/${registrationId}/unconfirm`).then((r) => r.data),
+    onSuccess: () => {
+      toast({ title: 'Đã hủy xác nhận TNV' });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'shift-detail', selectedShiftId] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'assignments', monthStr] });
     },
     onError: (err: any) =>
       toast({ title: 'Lỗi', description: err?.response?.data?.message, variant: 'destructive' }),
@@ -315,14 +338,8 @@ export default function AssignmentsPage() {
                                 : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
                             }`}
                           >
-                            <div className="font-medium truncate">{shiftLabel(shift)}</div>
-                            <div className="flex items-center justify-between gap-1 mt-0.5">
-                              <div className="flex items-center gap-0.5">
-                                <Users className="h-2.5 w-2.5 shrink-0" />
-                                <span>
-                                  {shift.registrationCount}/{shift.maxSlots}
-                                </span>
-                              </div>
+                            <div className="flex items-center justify-between font-medium truncate">
+                              <span>{shiftLabel(shift)}</span>
                               {shift.hasUnconfirmed && (
                                 <Clock
                                   className={`h-2.5 w-2.5 shrink-0 ${
@@ -331,6 +348,30 @@ export default function AssignmentsPage() {
                                 />
                               )}
                             </div>
+                            {shift.registrations && shift.registrations.length > 0 && (
+                              <div className="grid grid-cols-2 gap-0.5 mt-1">
+                                {shift.registrations.map((reg) => {
+                                  const givenName = reg.fullname?.trim().split(' ').pop() || '';
+                                  return (
+                                    <div
+                                      key={reg.id || reg.ma_tnv}
+                                      className={`px-0.5 py-0.25 text-[8px] leading-tight border rounded text-center truncate ${
+                                        isSelected
+                                          ? reg.isConfirmed
+                                            ? 'bg-blue-700 text-white border-blue-400'
+                                            : 'bg-amber-600 text-white border-amber-400'
+                                          : reg.isConfirmed
+                                          ? 'bg-green-100 text-green-800 border-green-300'
+                                          : 'bg-amber-100 text-amber-800 border-amber-300'
+                                      }`}
+                                      title={`${reg.fullname} (${reg.ma_tnv}) - ${reg.isConfirmed ? 'Đã xác nhận' : 'Chờ xác nhận'}`}
+                                    >
+                                      {givenName} {reg.ma_tnv}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </button>
                         );
                       })}
@@ -440,7 +481,18 @@ export default function AssignmentsPage() {
                               <p className="text-xs text-gray-400">{reg.user.ma_tnv}</p>
                             </div>
                             {reg.isConfirmed ? (
-                              <span title="Đã xác nhận"><CheckCircle className="h-4 w-4 text-green-500 shrink-0" /></span>
+                              <button
+                                className="h-6 w-6 flex items-center justify-center rounded hover:bg-red-50 text-green-500 hover:text-amber-600 transition-colors shrink-0 disabled:opacity-40"
+                                title="Đã xác nhận — bấm để hủy xác nhận"
+                                disabled={unconfirmRegMutation.isPending}
+                                onClick={() => unconfirmRegMutation.mutate(reg.id)}
+                              >
+                                {unconfirmRegMutation.isPending && unconfirmRegMutation.variables === reg.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="h-4 w-4" />
+                                )}
+                              </button>
                             ) : (
                               <button
                                 className="h-6 w-6 flex items-center justify-center rounded hover:bg-amber-50 text-amber-400 hover:text-green-500 transition-colors shrink-0 disabled:opacity-40"

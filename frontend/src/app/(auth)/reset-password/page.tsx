@@ -12,6 +12,7 @@ import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/brand/logo';
 import styles from './index.module.css';
 import clsx from 'clsx';
+import { PasswordInput } from '@/components/ui/password-input';
 
 const resetPasswordSchema = z
   .object({
@@ -94,12 +95,11 @@ function ResetPasswordForm() {
         <label htmlFor="newPassword" className="text-sm text-gray-600">
           Mật khẩu mới
         </label>
-        <input
+        <PasswordInput
           id="newPassword"
-          type="password"
           placeholder="Nhập mật khẩu mới"
           autoComplete="new-password"
-          className="w-full border-0 border-b border-gray-300 focus:border-brand-blue focus:ring-0 px-0 py-1.5 text-sm outline-none transition-colors"
+          className="w-full h-auto border-0 border-b border-gray-300 rounded-none focus:border-brand-blue focus:ring-0 px-0 py-1.5 pr-8 text-sm outline-none transition-colors"
           {...register('newPassword')}
         />
         {errors.newPassword && (
@@ -111,12 +111,11 @@ function ResetPasswordForm() {
         <label htmlFor="confirmPassword" className="text-sm text-gray-600">
           Xác nhận mật khẩu
         </label>
-        <input
+        <PasswordInput
           id="confirmPassword"
-          type="password"
           placeholder="Nhập lại mật khẩu mới"
           autoComplete="new-password"
-          className="w-full border-0 border-b border-gray-300 focus:border-brand-blue focus:ring-0 px-0 py-1.5 text-sm outline-none transition-colors"
+          className="w-full h-auto border-0 border-b border-gray-300 rounded-none focus:border-brand-blue focus:ring-0 px-0 py-1.5 pr-8 text-sm outline-none transition-colors"
           {...register('confirmPassword')}
         />
         {errors.confirmPassword && (

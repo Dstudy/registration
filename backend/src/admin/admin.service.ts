@@ -223,6 +223,18 @@ export class AdminService {
     return this.registrations.confirmAllForMonth(month);
   }
 
+  async unconfirmRegistration(registrationId: number) {
+    return this.registrations.unconfirmByAdmin(registrationId);
+  }
+
+  async unconfirmAllRegistrations(shiftId: number) {
+    return this.registrations.unconfirmAllByShift(shiftId);
+  }
+
+  async unconfirmAllForMonth(month: string) {
+    return this.registrations.unconfirmAllForMonth(month);
+  }
+
   async cancelRegistration(registrationId: number) {
     return this.registrations.cancelByAdmin(registrationId);
   }

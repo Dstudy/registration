@@ -212,6 +212,46 @@ export class RegistrationsService {
     return { confirmed: result.count, month };
   }
 
+  async unconfirmByAdmin(registrationId: number) {
+    const registration = await this.prisma.registration.findUnique({
+      where: { id: registrationId },
+    });
+    if (!registration) throw new NotFoundException('Không tìm thấy đăng ký');
+
+    return this.prisma.registration.update({
+      where: { id: registrationId },
+      data: { isConfirmed: false },
+    });
+  }
+
+  async unconfirmAllByShift(shiftId: number) {
+    const shift = await this.prisma.shiftInstance.findUnique({ where: { id: shiftId } });
+    if (!shift) throw new NotFoundException('Không tìm thấy ca trực');
+
+    const result = await this.prisma.registration.updateMany({
+      where: { shiftId, isConfirmed: true },
+      data: { isConfirmed: false },
+    });
+
+    return { unconfirmed: result.count, shiftId };
+  }
+
+  async unconfirmAllForMonth(month: string) {
+    const [year, m] = month.split('-').map(Number);
+    const startDate = new Date(Date.UTC(year, m - 1, 1));
+    const endDate = new Date(Date.UTC(year, m, 0, 23, 59, 59));
+
+    const result = await this.prisma.registration.updateMany({
+      where: {
+        isConfirmed: true,
+        shift: { date: { gte: startDate, lte: endDate } },
+      },
+      data: { isConfirmed: false },
+    });
+
+    return { unconfirmed: result.count, month };
+  }
+
   async cancelByAdmin(registrationId: number) {
     const registration = await this.prisma.registration.findUnique({
       where: { id: registrationId },

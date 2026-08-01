@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth.store';
-import { VolunteerTopNav } from '@/components/layout/volunteer-nav';
+import { VolunteerTopNav, VolunteerHamburger } from '@/components/layout/volunteer-nav';
 import { NotificationBell } from '@/components/layout/notification-bell';
 import { Logo } from '@/components/brand/logo';
 import clsx from 'clsx';
@@ -52,16 +52,25 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
         </div>
       )}
       <header
-        className="px-8 sm:px-12 lg:px-16 pt-5 sm:pt-10 lg:pt-14 pb-5 flex items-center gap-3 md:gap-6"
+        className="px-3 sm:px-8 lg:px-16 pt-3 sm:pt-8 lg:pt-14 pb-3 sm:pb-5 flex items-center gap-2 sm:gap-4 md:gap-6 wide:grid wide:grid-cols-[auto_1fr_auto]"
       >
         <Link href="/dashboard" className="shrink-0">
           <Logo />
         </Link>
-        <div className="flex items-center gap-3 ml-auto shrink-0">
+
+        {/* Nav in header center — only at wide+ (1400px) */}
+        {!isDashboard && (
+          <nav className="hidden wide:flex items-center justify-center gap-1 lg:gap-2 overflow-x-auto">
+            {/* rendered inline via layout so it has access to navList */}
+            <VolunteerTopNav inHeader />
+          </nav>
+        )}
+
+        <div className="flex items-center gap-2 sm:gap-3 ml-auto wide:ml-0 shrink-0">
           <NotificationBell />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <Link href="/account" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <div className="relative h-8 w-8 rounded-full bg-blue-100 overflow-hidden flex items-center justify-center shrink-0">
+              <div className="relative h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-blue-100 overflow-hidden flex items-center justify-center shrink-0">
                 <span className="text-xs font-bold text-blue-600 select-none">
                   {(user.fullname || user.ma_tnv).split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()}
                 </span>
@@ -72,19 +81,22 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
             </Link>
             <button
               onClick={() => logout().then(() => router.push('/login'))}
-              className="text-sm text-gray-500 hover:text-gray-700 transition-colors px-2 py-1 rounded hover:bg-gray-100"
+              className="text-xs sm:text-sm text-gray-500 hover:text-gray-700 transition-colors px-1.5 sm:px-2 py-1 rounded hover:bg-gray-100 hidden sm:block"
             >
               Đăng xuất
             </button>
           </div>
+          {/* Mobile-only hamburger — right corner of header */}
+          {!isDashboard && <VolunteerHamburger />}
         </div>
       </header>
 
+      {/* Below-header nav — sm to wide (640px–1399px) */}
       {!isDashboard && <VolunteerTopNav />}
 
       {/* Page content */}
       <main className={clsx("flex-1", {
-        'p-4 md:p-6': !isDashboard,
+        'p-2 sm:p-4 md:p-6': !isDashboard,
       })}>{children}</main>
     </div>
   );

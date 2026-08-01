@@ -91,44 +91,47 @@ export default function RequestsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b pb-4">
         <div>
           <h1 className="text-2xl font-bold text-brand-blue">Yêu cầu ca trực</h1>
           <p className="text-xs text-gray-500 mt-1">Đổi ca trực hoặc tìm người trông hộ dễ dàng</p>
         </div>
-        <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 w-full sm:w-auto overflow-x-auto shrink-0 shadow-inner">
+        <div className="grid grid-cols-3 bg-gray-100 p-1 rounded-lg border border-gray-200 w-full lg:w-auto shrink-0 shadow-inner gap-1">
           <button
             onClick={() => setActiveView('swap')}
-            className={`flex-1 sm:flex-none px-4 py-2 text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+            className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
               activeView === 'swap'
                 ? 'bg-white text-brand-blue shadow-sm border border-gray-100 font-bold'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50/50 font-medium'
             }`}
           >
-            <ArrowLeftRight className="h-4 w-4" />
-            Đổi ca (Swap)
+            <ArrowLeftRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+            <span className="hidden sm:inline">Đổi ca (Swap)</span>
+            <span className="sm:hidden">Đổi ca</span>
           </button>
           <button
             onClick={() => setActiveView('substitute')}
-            className={`flex-1 sm:flex-none px-4 py-2 text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+            className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
               activeView === 'substitute'
                 ? 'bg-white text-brand-blue shadow-sm border border-gray-100 font-bold'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50/50 font-medium'
             }`}
           >
-            <Plus className="h-4 w-4" />
-            Thay thế (Substitute)
+            <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+            <span className="hidden sm:inline">Thay thế (Substitute)</span>
+            <span className="sm:hidden">Thay thế</span>
           </button>
           <button
             onClick={() => setActiveView('history')}
-            className={`flex-1 sm:flex-none px-4 py-2 text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+            className={`px-2 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-md transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
               activeView === 'history'
                 ? 'bg-white text-brand-blue shadow-sm border border-gray-100 font-bold'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50/50 font-medium'
             }`}
           >
-            <History className="h-4 w-4" />
-            Lịch sử (History)
+            <History className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+            <span className="hidden sm:inline">Lịch sử (History)</span>
+            <span className="sm:hidden">Lịch sử</span>
           </button>
         </div>
       </div>
