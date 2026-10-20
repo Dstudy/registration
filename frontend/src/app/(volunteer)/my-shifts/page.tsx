@@ -60,7 +60,12 @@ function ShiftCard({ reg, onRequest }: { reg: any; onRequest?: () => void }) {
             {formatShiftTimeRange(reg)}
           </span>
         </div>
-        <div className="flex flex-1 items-center justify-center gap-2">
+        <div className="flex flex-1 items-center justify-center gap-2 flex-wrap p-2">
+          {reg.registrationType === "AUTO_RANDOM" && (
+            <span className="text-xs bg-purple-100 text-purple-700 font-semibold px-2 py-0.5 rounded-full">
+              Tự động phân bổ
+            </span>
+          )}
           <Badge variant={reg.isConfirmed ? "success" : "warning"}>
             {reg.isConfirmed ? "Đã xác nhận" : "Chờ xác nhận"}
           </Badge>

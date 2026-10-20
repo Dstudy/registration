@@ -133,6 +133,18 @@ export class AdminController {
     return this.adminService.bulkAssign(user.id, body.shiftId, body.codes);
   }
 
+  @Get('assignments/flexible-summary')
+  getFlexibleSummary(@Query('month') month?: string) {
+    const targetMonth = month || this.adminService.getDefaultKpiMonth();
+    return this.adminService.getFlexibleVolunteersSummary(targetMonth);
+  }
+
+  @Post('assignments/auto-fill-flexible')
+  autoFillFlexible(@Body() body: { month?: string }) {
+    const targetMonth = body.month || this.adminService.getDefaultKpiMonth();
+    return this.adminService.autoFillFlexibleShifts(targetMonth);
+  }
+
   @Delete('users')
   deleteAllUsers() {
     return this.usersService.deleteAllVolunteers();

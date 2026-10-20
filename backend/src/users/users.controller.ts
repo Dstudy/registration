@@ -32,9 +32,10 @@ export class UsersController {
   @Get()
   findAll(
     @Query('status') status?: UserStatus,
+    @Query('role') role?: Role,
     @Query('search') search?: string,
   ) {
-    return this.usersService.findAll({ status, role: Role.VOLUNTEER, search });
+    return this.usersService.findAll({ status, role, search });
   }
 
   @Roles(Role.ADMIN)

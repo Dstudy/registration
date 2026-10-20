@@ -18,7 +18,7 @@ interface Volunteer {
   email: string | null;
   status: 'ACTIVE' | 'INACTIVE';
   min_shifts_per_month: number;
-  role: 'ADMIN' | 'VOLUNTEER';
+  role: 'ADMIN' | 'VOLUNTEER' | 'COLLABORATOR';
   _count: { registrations: number };
 }
 
@@ -44,7 +44,7 @@ export default function VolunteersPage() {
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editMinShifts, setEditMinShifts] = useState(2);
-  const [editRole, setEditRole] = useState<'ADMIN' | 'VOLUNTEER'>('VOLUNTEER');
+  const [editRole, setEditRole] = useState<'ADMIN' | 'VOLUNTEER' | 'COLLABORATOR'>('VOLUNTEER');
   const [editFullname, setEditFullname] = useState('');
   const [editMaTnv, setEditMaTnv] = useState('');
   const [editEmail, setEditEmail] = useState('');
@@ -264,6 +264,7 @@ export default function VolunteersPage() {
                     onChange={(e) => setCreateForm((f) => ({ ...f, role: e.target.value }))}
                   >
                     <option value="VOLUNTEER">Tình nguyện viên (VOLUNTEER)</option>
+                    <option value="COLLABORATOR">Cộng tác viên (COLLABORATOR)</option>
                     <option value="ADMIN">Quản trị viên (ADMIN)</option>
                   </select>
                 </div>
@@ -479,9 +480,10 @@ export default function VolunteersPage() {
                         id="editRole"
                         className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-gray-900"
                         value={editRole}
-                        onChange={(e) => setEditRole(e.target.value as 'ADMIN' | 'VOLUNTEER')}
+                        onChange={(e) => setEditRole(e.target.value as 'ADMIN' | 'VOLUNTEER' | 'COLLABORATOR')}
                       >
                         <option value="VOLUNTEER">Tình nguyện viên</option>
+                        <option value="COLLABORATOR">Cộng tác viên</option>
                         <option value="ADMIN">Quản trị viên</option>
                       </select>
                     </div>
@@ -517,8 +519,20 @@ export default function VolunteersPage() {
                       <Badge variant={vol.status === 'ACTIVE' ? 'default' : 'secondary'}>
                         {vol.status === 'ACTIVE' ? 'Hoạt động' : 'Không hoạt động'}
                       </Badge>
-                      <Badge variant={vol.role === 'ADMIN' ? 'destructive' : 'info'}>
-                        {vol.role === 'ADMIN' ? 'Quản trị viên' : 'Tình nguyện viên'}
+                      <Badge
+                        variant={
+                          vol.role === 'ADMIN'
+                            ? 'destructive'
+                            : vol.role === 'COLLABORATOR'
+                            ? 'warning'
+                            : 'info'
+                        }
+                      >
+                        {vol.role === 'ADMIN'
+                          ? 'Quản trị viên'
+                          : vol.role === 'COLLABORATOR'
+                          ? 'Cộng tác viên'
+                          : 'Tình nguyện viên'}
                       </Badge>
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">

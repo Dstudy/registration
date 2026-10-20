@@ -307,7 +307,7 @@ export class RequestsService {
     return this.prisma.user.findMany({
       where: {
         id: { not: currentUserId },
-        role: Role.VOLUNTEER,
+        role: { in: [Role.VOLUNTEER, Role.COLLABORATOR] },
         status: UserStatus.ACTIVE,
         registrations: { some: { shift: { date: { gte: now } } } },
         ...(search && {

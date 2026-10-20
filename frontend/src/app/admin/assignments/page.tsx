@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -10,13 +10,14 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/use-toast';
 import api from '@/lib/api';
-import { ChevronLeft, ChevronRight, Users, Search, X, Plus, CheckCircle, Clock, Loader2, Trash2, FileDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, Search, X, Plus, CheckCircle, Clock, Loader2, Trash2, FileDown, Sparkles, Shuffle } from 'lucide-react';
 
 interface ShiftVolunteer {
   id: number;
   isConfirmed: boolean;
   ma_tnv: string;
   fullname: string;
+  registrationType?: string;
 }
 
 interface Shift {
@@ -34,6 +35,7 @@ interface Shift {
 interface Registration {
   id: number;
   isConfirmed: boolean;
+  registrationType?: string;
   user: { id: number; ma_tnv: string; fullname: string };
 }
 
@@ -59,10 +61,19 @@ export default function AssignmentsPage() {
   const queryClient = useQueryClient();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedShiftId, setSelectedShiftId] = useState<number | null>(null);
+  const [selectedVolunteerId, setSelectedVolunteerId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [addingCode, setAddingCode] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<number | null>(null);
   const [exportingPos, setExportingPos] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleEvent = (e: any) => {
+      setSelectedVolunteerId(e.detail?.volunteerId ?? null);
+    };
+    window.addEventListener('selectVolunteerForHighlight', handleEvent);
+    return () => window.removeEventListener('selectVolunteerForHighlight', handleEvent);
+  }, []);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth() + 1;
@@ -89,6 +100,25 @@ export default function AssignmentsPage() {
   });
 
   const volunteers: Volunteer[] = searchData?.volunteers ?? [];
+
+  // Map volunteer ID to set of shift IDs registered in current month
+  const volunteerShiftMap = new Map<number, Set<number>>();
+  shifts.forEach((shift) => {
+    shift.registrations?.forEach((reg) => {
+      // Find matching volunteer or track by reg id if user id present
+      const userId = (reg as any).userId ?? (reg as any).user?.id;
+      if (userId) {
+        if (!volunteerShiftMap.has(userId)) {
+          volunteerShiftMap.set(userId, new Set());
+        }
+        volunteerShiftMap.get(userId)!.add(shift.id);
+      }
+    });
+  });
+
+  const highlightedShiftIds = selectedVolunteerId
+    ? volunteerShiftMap.get(selectedVolunteerId) || new Set<number>()
+    : new Set<number>();
 
   const assignMutation = useMutation({
     mutationFn: ({ shiftId, code }: { shiftId: number; code: string }) =>
@@ -179,6 +209,42 @@ export default function AssignmentsPage() {
     },
   });
 
+  const [showAutoFillModal, setShowAutoFillModal] = useState(false);
+
+  const { data: flexibleSummary, isLoading: loadingFlexibleSummary } = useQuery<{
+    month: string;
+    flexibleCount: number;
+    flexibleVolunteers: { id: number; ma_tnv: string; fullname: string; minShifts: number; registeredCount: number }[];
+    unfilledShiftsCount: number;
+    totalOpenSlots: number;
+  }>({
+    queryKey: ['admin', 'flexible-summary', monthStr],
+    queryFn: () => api.get(`/admin/assignments/flexible-summary?month=${monthStr}`).then((r) => r.data.data),
+  });
+
+  const autoFillMutation = useMutation({
+    mutationFn: () =>
+      api.post('/admin/assignments/auto-fill-flexible', { month: monthStr }).then((r) => r.data.data),
+    onSuccess: (data: any) => {
+      toast({
+        title: 'Bốc ngẫu nhiên thành công',
+        description: `Đã tự động gán ${data.assignedCount} lượt trực cho ${data.volunteerCount} TNV.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'assignments', monthStr] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'shift-detail', selectedShiftId] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'flexible-summary', monthStr] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+      setShowAutoFillModal(false);
+    },
+    onError: (err: any) => {
+      toast({
+        title: 'Lỗi bốc ngẫu nhiên',
+        description: err?.response?.data?.message || err.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleExport = async (position: 'PLACE_1' | 'PLACE_2') => {
     setExportingPos(position);
     try {
@@ -225,49 +291,69 @@ export default function AssignmentsPage() {
     setSearchQuery('');
   };
 
+  const selectShift = (shiftId: number) => {
+    setSelectedShiftId(selectedShiftId === shiftId ? null : shiftId);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-900">Phân công TNV</h1>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={confirmMonthMutation.isPending || shifts.length === 0}
-          onClick={() => confirmMonthMutation.mutate(monthStr)}
-        >
-          {confirmMonthMutation.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : (
-            <CheckCircle className="h-4 w-4 mr-2" />
-          )}
-          Xác nhận tất cả tháng {month}/{year}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={!!exportingPos || shifts.length === 0}
-          onClick={() => handleExport('PLACE_1')}
-        >
-          {exportingPos === 'PLACE_1' ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : (
-            <FileDown className="h-4 w-4 mr-2" />
-          )}
-          Xuất Excel Cơ sở 1
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={!!exportingPos || shifts.length === 0}
-          onClick={() => handleExport('PLACE_2')}
-        >
-          {exportingPos === 'PLACE_2' ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : (
-            <FileDown className="h-4 w-4 mr-2" />
-          )}
-          Xuất Excel Cơ sở 2
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="default"
+            size="sm"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
+            onClick={() => setShowAutoFillModal(true)}
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            Bốc ngẫu nhiên (Auto Fill)
+            {flexibleSummary && flexibleSummary.flexibleCount > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.2 bg-white/20 rounded-full text-xs font-semibold">
+                {flexibleSummary.flexibleCount}
+              </span>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={confirmMonthMutation.isPending || shifts.length === 0}
+            onClick={() => confirmMonthMutation.mutate(monthStr)}
+          >
+            {confirmMonthMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <CheckCircle className="h-4 w-4 mr-2" />
+            )}
+            Xác nhận tất cả tháng {month}/{year}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!!exportingPos || shifts.length === 0}
+            onClick={() => handleExport('PLACE_1')}
+          >
+            {exportingPos === 'PLACE_1' ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <FileDown className="h-4 w-4 mr-2" />
+            )}
+            Xuất Excel Cơ sở 1
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!!exportingPos || shifts.length === 0}
+            onClick={() => handleExport('PLACE_2')}
+          >
+            {exportingPos === 'PLACE_2' ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <FileDown className="h-4 w-4 mr-2" />
+            )}
+            Xuất Excel Cơ sở 2
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-4 items-start">
@@ -326,13 +412,17 @@ export default function AssignmentsPage() {
                       {dayShifts.map((shift) => {
                         const isFull = shift.registrationCount >= shift.maxSlots;
                         const isSelected = selectedShiftId === shift.id;
+                        const isHighlighted = highlightedShiftIds.has(shift.id);
+
                         return (
                           <button
                             key={shift.id}
-                            onClick={() => setSelectedShiftId(isSelected ? null : shift.id)}
+                            onClick={() => selectShift(shift.id)}
                             title={shift.hasUnconfirmed ? 'Có tình nguyện viên chưa xác nhận' : undefined}
-                            className={`w-full text-left px-1.5 py-1 rounded text-[11px] leading-tight mb-1 border transition-all ${
-                              isSelected
+                            className={`w-full text-left px-1.5 py-1 rounded text-[11px] leading-tight mb-1 border transition-all duration-300 ${
+                              isHighlighted
+                                ? 'bg-amber-400 text-slate-900 border-amber-500 shadow-md ring-2 ring-amber-400 animate-pulse scale-[1.03] z-10'
+                                : isSelected
                                 ? 'bg-blue-600 text-white border-blue-700 shadow-sm'
                                 : isFull
                                 ? 'bg-gray-100 text-gray-400 border-gray-200'
@@ -346,7 +436,11 @@ export default function AssignmentsPage() {
                               {shift.hasUnconfirmed && (
                                 <Clock
                                   className={`h-3 w-3 shrink-0 ${
-                                    isSelected ? 'text-amber-200' : 'text-amber-500'
+                                    isHighlighted
+                                      ? 'text-slate-900'
+                                      : isSelected
+                                      ? 'text-amber-200'
+                                      : 'text-amber-500'
                                   }`}
                                 />
                               )}
@@ -359,7 +453,9 @@ export default function AssignmentsPage() {
                                     <div
                                       key={reg.id || reg.ma_tnv}
                                       className={`px-1 py-0.5 text-[10px] font-medium leading-tight border rounded text-center truncate ${
-                                        isSelected
+                                        isHighlighted
+                                          ? 'bg-amber-200 text-slate-900 border-amber-600 font-bold'
+                                          : isSelected
                                           ? reg.isConfirmed
                                             ? 'bg-blue-700 text-white border-blue-400'
                                             : 'bg-amber-600 text-white border-amber-400'
@@ -480,7 +576,14 @@ export default function AssignmentsPage() {
                               {reg.user.fullname.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium truncate">{reg.user.fullname}</p>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="text-sm font-medium truncate">{reg.user.fullname}</p>
+                                {reg.registrationType === 'AUTO_RANDOM' && (
+                                  <span className="text-[10px] bg-purple-100 text-purple-700 font-semibold px-1.5 py-0.2 rounded">
+                                    Tự động
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-xs text-gray-400">{reg.user.ma_tnv}</p>
                             </div>
                             {reg.isConfirmed ? (
@@ -616,6 +719,108 @@ export default function AssignmentsPage() {
           </div>
         )}
       </div>
+
+      {/* Modal Bốc ngẫu nhiên (Auto Fill) */}
+      {showAutoFillModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowAutoFillModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-lg w-full p-5 sm:p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Tự động bốc ngẫu nhiên</h3>
+                  <p className="text-xs text-gray-500">Tháng {month}/{year}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAutoFillModal(false)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-md"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-sm text-gray-600">
+              <p>
+                Hệ thống sẽ chạy thuật toán <strong>2 giai đoạn</strong> để xếp lịch cho các TNV đã chọn <strong>&quot;Lịch nào cũng được&quot;</strong> vào các ca còn thiếu người nhất:
+              </p>
+              <ul className="list-disc pl-5 space-y-1 text-xs text-gray-500">
+                <li><strong>Giai đoạn 1:</strong> Gán đủ KPI tối thiểu (thường là 2 ca) cho từng TNV linh hoạt.</li>
+                <li><strong>Giai đoạn 2:</strong> Nếu các ca trực vẫn còn slot trống, tiếp tục gán thêm đều (tối đa không quá 5 ca/tháng).</li>
+                <li>Ưu tiên các ca ít người đăng ký nhất, đảm bảo không trùng giờ và không trùng ngày.</li>
+              </ul>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
+                  <p className="text-xs text-indigo-600 font-medium">TNV chọn linh hoạt</p>
+                  <p className="text-xl font-bold text-indigo-900 mt-0.5">
+                    {loadingFlexibleSummary ? '...' : (flexibleSummary?.flexibleCount ?? 0)}
+                  </p>
+                </div>
+                <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg">
+                  <p className="text-xs text-amber-600 font-medium">Slot trống trong tháng</p>
+                  <p className="text-xl font-bold text-amber-900 mt-0.5">
+                    {loadingFlexibleSummary ? '...' : (flexibleSummary?.totalOpenSlots ?? 0)}
+                  </p>
+                </div>
+              </div>
+
+              {flexibleSummary?.flexibleVolunteers && flexibleSummary.flexibleVolunteers.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-semibold text-gray-700 mb-1">Danh sách TNV linh hoạt:</p>
+                  <div className="max-h-36 overflow-y-auto border rounded-lg p-2 divide-y space-y-1 bg-gray-50 text-xs">
+                    {flexibleSummary.flexibleVolunteers.map((vol) => (
+                      <div key={vol.id} className="pt-1 first:pt-0 flex items-center justify-between">
+                        <span className="font-medium text-gray-800">{vol.fullname} ({vol.ma_tnv})</span>
+                        <span className="text-gray-500">Hiện có: {vol.registeredCount}/{vol.minShifts} ca</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {flexibleSummary?.flexibleCount === 0 && (
+                <p className="text-xs text-amber-600 italic">
+                  Chưa có TNV nào chọn &quot;Lịch nào cũng được&quot; trong tháng này.
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAutoFillModal(false)}
+                disabled={autoFillMutation.isPending}
+              >
+                Hủy
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                disabled={autoFillMutation.isPending || (flexibleSummary?.flexibleCount ?? 0) === 0}
+                onClick={() => autoFillMutation.mutate()}
+              >
+                {autoFillMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-2" />
+                )}
+                Bắt đầu bốc ngẫu nhiên
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

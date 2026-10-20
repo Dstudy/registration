@@ -72,6 +72,7 @@ interface DayPanelProps {
   date: Date;
   shifts: ShiftInstance[];
   isRegistrationOpen: boolean;
+  isFlexible: boolean;
   onConfirm: (shiftIds: number[]) => void;
   onCancel: (shiftId: number) => void;
   isMutating: boolean;
@@ -83,6 +84,7 @@ function DayPanel({
   date,
   shifts,
   isRegistrationOpen,
+  isFlexible,
   onConfirm,
   onCancel,
   isMutating,
@@ -108,6 +110,7 @@ function DayPanel({
     const isFull = shift.registrationCount >= shift.maxSlots;
     if (
       !isRegistrationOpen ||
+      isFlexible ||
       !shift.isActive ||
       isFull ||
       shift.isUserRegistered
@@ -292,6 +295,35 @@ export function ShiftCalendar({
     queryFn: () => api.get(`/shifts?month=${month}`).then((r) => r.data.data),
   });
 
+  const { data: flexibleData } = useQuery<{ isFlexible: boolean; month: string }>({
+    queryKey: ["flexible-preference", month],
+    queryFn: () => api.get(`/registrations/flexible-preference?month=${month}`).then((r) => r.data.data),
+    enabled: isAuthenticated,
+  });
+  const isFlexible = flexibleData?.isFlexible ?? false;
+
+  const flexibleMutation = useMutation({
+    mutationFn: (newVal: boolean) =>
+      api.post("/registrations/flexible-preference", { month, isFlexible: newVal }),
+    onSuccess: (_, newVal) => {
+      queryClient.invalidateQueries({ queryKey: ["flexible-preference", month] });
+      queryClient.invalidateQueries({ queryKey: ["shifts", month] });
+      toast({
+        title: newVal ? "Đã bật 'Lịch nào cũng được'" : "Đã tắt 'Lịch nào cũng được'",
+        description: newVal
+          ? "Hệ thống sẽ tự động xếp bạn vào các ca thiếu người nhất sau khi đóng cổng đăng ký."
+          : "Bây giờ bạn có thể tự chọn từng ca trực trên lịch.",
+      });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Lỗi cập nhật",
+        description: err?.response?.data?.message || err.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const registeredCount = useMemo(() => {
     return shifts.filter((s) => s.isUserRegistered).length;
   }, [shifts]);
@@ -448,6 +480,43 @@ export function ShiftCalendar({
       </div>
 
       <div className="flex-1 min-w-0 h-full flex flex-col w-full">
+        {/* Tùy chọn Lịch nào cũng được */}
+        <div
+          className={cn(
+            "w-full rounded-2xl p-3 sm:p-4 border transition-all mb-3",
+            isFlexible
+              ? "bg-amber-50 border-amber-300 text-amber-900 shadow-sm"
+              : "bg-blue-50/70 border-blue-200 text-blue-900",
+          )}
+        >
+          <label className="flex items-start sm:items-center gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={isFlexible}
+              disabled={!isRegistrationOpen || flexibleMutation.isPending}
+              onChange={(e) => flexibleMutation.mutate(e.target.checked)}
+              className="mt-0.5 sm:mt-0 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50 accent-blue-600 cursor-pointer"
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-sm sm:text-base">
+                  Lịch nào cũng được (Linh hoạt)
+                </span>
+                {isFlexible && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-semibold">
+                    Đang kích hoạt
+                  </span>
+                )}
+              </div>
+              <p className="text-xs sm:text-sm text-gray-600 mt-0.5">
+                {isFlexible
+                  ? "Hệ thống sẽ tự động bốc bạn vào các ca thiếu người nhất sau khi đóng cổng đăng ký. Bạn không cần đăng ký từng ca."
+                  : "Tích chọn nếu bạn rảnh và có thể trực bất kỳ buổi nào để hệ thống tự động xếp ca cho bạn."}
+              </p>
+            </div>
+          </label>
+        </div>
+
         <div className="grid grid-cols-6 gap-1.5 sm:gap-2 w-full">
           {weekDayHeaders.map((d) => (
             <div
@@ -511,6 +580,7 @@ export function ShiftCalendar({
               date={new Date(Date.UTC(year, m - 1, displayedDay))}
               shifts={displayedShifts}
               isRegistrationOpen={isRegistrationOpen}
+              isFlexible={isFlexible}
               onConfirm={handleConfirm}
               onCancel={(id) => cancelMutation.mutate(id)}
               isMutating={isMutating}
@@ -534,6 +604,7 @@ export function ShiftCalendar({
               date={new Date(Date.UTC(year, m - 1, lockedDay))}
               shifts={displayedShifts}
               isRegistrationOpen={isRegistrationOpen}
+              isFlexible={isFlexible}
               onConfirm={handleConfirm}
               onCancel={(id) => cancelMutation.mutate(id)}
               isMutating={isMutating}

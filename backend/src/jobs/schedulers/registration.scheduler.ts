@@ -50,15 +50,17 @@ export class RegistrationScheduler implements OnApplicationBootstrap {
       this.logger.log('Đã qua thời gian đăng ký tháng này — đã đóng');
     }
 
+    const targetMonth = `${year}-${String(month + 1).padStart(2, '0')}`;
+
     if (openDate.getTime() > nowMs) {
       const delay = openDate.getTime() - nowMs;
-      await this.windowQueue.add('open-registration', {}, { delay, jobId: `open-${year}-${month + 1}` });
+      await this.windowQueue.add('open-registration', { month: targetMonth }, { delay, jobId: `open-${year}-${month + 1}` });
       this.logger.log(`Đã lên lịch mở đăng ký: ${openDate.toISOString()}`);
     }
 
     if (closeDate.getTime() > nowMs) {
       const delay = closeDate.getTime() - nowMs;
-      await this.windowQueue.add('close-registration', {}, { delay, jobId: `close-${year}-${month + 1}` });
+      await this.windowQueue.add('close-registration', { month: targetMonth }, { delay, jobId: `close-${year}-${month + 1}` });
       this.logger.log(`Đã lên lịch đóng đăng ký: ${closeDate.toISOString()}`);
     }
   }
