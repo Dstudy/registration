@@ -59,7 +59,7 @@ export class UsersService {
   findAll(filters?: { status?: UserStatus; role?: Role; search?: string }) {
     return this.prisma.user.findMany({
       where: {
-        role: filters?.role ?? Role.VOLUNTEER,
+        role: filters?.role ? filters.role : { in: [Role.VOLUNTEER, Role.COLLABORATOR] },
         status: filters?.status,
         ...(filters?.search && {
           OR: [
@@ -220,7 +220,9 @@ export class UsersService {
   }
 
   async deleteAllVolunteers() {
-    const result = await this.prisma.user.deleteMany({ where: { role: Role.VOLUNTEER } });
+    const result = await this.prisma.user.deleteMany({
+      where: { role: { in: [Role.VOLUNTEER, Role.COLLABORATOR] } },
+    });
     return { deleted: result.count };
   }
 

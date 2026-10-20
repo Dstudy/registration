@@ -39,6 +39,22 @@ export class RegistrationsController {
     return this.registrationsService.findMyRegistrations(user.id, upcoming !== 'false');
   }
 
+  @Get('flexible-preference')
+  getFlexiblePreference(
+    @CurrentUser() user: JwtUser,
+    @Query('month') month?: string,
+  ) {
+    return this.registrationsService.getFlexiblePreference(user.id, month);
+  }
+
+  @Post('flexible-preference')
+  setFlexiblePreference(
+    @CurrentUser() user: JwtUser,
+    @Body() dto: { month: string; isFlexible: boolean },
+  ) {
+    return this.registrationsService.setFlexiblePreference(user.id, dto.month, dto.isFlexible);
+  }
+
   @Public()
   @Get('status')
   async getStatus() {

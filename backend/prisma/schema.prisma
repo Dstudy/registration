@@ -14,6 +14,7 @@ datasource db {
 enum Role {
   ADMIN
   VOLUNTEER
+  COLLABORATOR
 }
 
 enum UserStatus {
@@ -30,6 +31,7 @@ enum RegistrationType {
   SELF
   BNS_ASSIGNED
   SUBSTITUTE
+  AUTO_RANDOM
 }
 
 enum RequestType {
@@ -78,6 +80,7 @@ model User {
   receivedRequests ShiftRequest[] @relation("Receiver")
 
   notifications    Notification[]
+  flexiblePreferences FlexibleRegistrationPreference[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -179,3 +182,17 @@ model SystemConfig {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model FlexibleRegistrationPreference {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  month     String   // Format: "YYYY-MM"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month])
+  @@index([month])
+}
+

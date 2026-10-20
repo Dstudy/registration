@@ -46,8 +46,8 @@ export class AdminService {
 
     const [totalVolunteers, activeVolunteers, shiftsThisMonth, totalRegistrationsThisMonth, pendingRequests] =
       await Promise.all([
-        this.prisma.user.count({ where: { role: Role.VOLUNTEER } }),
-        this.prisma.user.count({ where: { role: Role.VOLUNTEER, status: UserStatus.ACTIVE } }),
+        this.prisma.user.count({ where: { role: { in: [Role.VOLUNTEER, Role.COLLABORATOR] } } }),
+        this.prisma.user.count({ where: { role: { in: [Role.VOLUNTEER, Role.COLLABORATOR] }, status: UserStatus.ACTIVE } }),
         this.prisma.shiftInstance.count({ where: { date: { gte: startDate, lte: endDate } } }),
         this.prisma.registration.count({
           where: { shift: { date: { gte: startDate, lte: endDate } } },
@@ -72,7 +72,7 @@ export class AdminService {
     const endDate = new Date(Date.UTC(year, m, 0, 23, 59, 59));
 
     const volunteers = await this.prisma.user.findMany({
-      where: { role: Role.VOLUNTEER, status: UserStatus.ACTIVE },
+      where: { role: { in: [Role.VOLUNTEER, Role.COLLABORATOR] }, status: UserStatus.ACTIVE },
       include: {
         _count: {
           select: {
@@ -106,7 +106,7 @@ export class AdminService {
     const registrations = await this.prisma.registration.findMany({
       where: { shift: { date: { gte: startDate, lte: endDate } } },
       include: {
-        user: { select: { ma_tnv: true, fullname: true } },
+        user: { select: { ma_tnv: true, fullname: true, role: true } },
         shift: { select: { date: true, position: true, startTime: true, endTime: true } },
       },
       orderBy: [{ user: { fullname: 'asc' } }, { shift: { date: 'asc' } }],
@@ -135,9 +135,10 @@ export class AdminService {
     });
 
     for (const reg of registrations) {
+      const code = reg.user.role === Role.COLLABORATOR ? 'CTV' : reg.user.ma_tnv;
       ws.addRow({
         fullname: reg.user.fullname,
-        ma_tnv: reg.user.ma_tnv,
+        ma_tnv: code,
         place: POSITION_LABELS[reg.shift.position] ?? reg.shift.position,
         day: formatDate(new Date(reg.shift.date)),
         hours: `${formatTime(new Date(reg.shift.startTime))} - ${formatTime(new Date(reg.shift.endTime))}`,
@@ -446,5 +447,69 @@ export class AdminService {
     }
 
     return preview;
+  }
+
+  async getFlexibleVolunteersSummary(month: string) {
+    const [year, m] = month.split('-').map(Number);
+    const startDate = new Date(Date.UTC(year, m - 1, 1));
+    const endDate = new Date(Date.UTC(year, m, 0, 23, 59, 59));
+
+    const flexiblePrefs = await this.prisma.flexibleRegistrationPreference.findMany({
+      where: { month },
+      include: {
+        user: {
+          select: {
+            id: true,
+            ma_tnv: true,
+            fullname: true,
+            status: true,
+            min_shifts_per_month: true,
+            _count: {
+              select: {
+                registrations: {
+                  where: { shift: { date: { gte: startDate, lte: endDate } } },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const activeFlexible = flexiblePrefs
+      .map((p) => p.user)
+      .filter((u) => u.status === 'ACTIVE');
+
+    const publishedShifts = await this.prisma.shiftInstance.findMany({
+      where: {
+        date: { gte: startDate, lte: endDate },
+        isActive: true,
+        isPublished: true,
+      },
+      include: {
+        _count: { select: { registrations: true } },
+      },
+    });
+
+    const unfilledShifts = publishedShifts.filter((s) => s._count.registrations < s.maxSlots);
+    const totalOpenSlots = unfilledShifts.reduce((acc, s) => acc + (s.maxSlots - s._count.registrations), 0);
+
+    return {
+      month,
+      flexibleCount: activeFlexible.length,
+      flexibleVolunteers: activeFlexible.map((u) => ({
+        id: u.id,
+        ma_tnv: u.ma_tnv,
+        fullname: u.fullname,
+        minShifts: u.min_shifts_per_month,
+        registeredCount: u._count.registrations,
+      })),
+      unfilledShiftsCount: unfilledShifts.length,
+      totalOpenSlots,
+    };
+  }
+
+  async autoFillFlexibleShifts(month: string) {
+    return this.registrations.autoFillFlexibleShifts(month);
   }
 }
